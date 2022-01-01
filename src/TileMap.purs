@@ -27,7 +27,7 @@ type LoadedTile = { e :: ElementOrImage, loc :: TileLoc }
 data TileMap = TileMap String (Array TileData)
 
 tileMap :: TileMap
-tileMap = TileMap "assets/PNG/Default size/Environment" tileData
+tileMap = TileMap "assets/PNG/Retina/Environment" tileData
 
 tileData :: Array TileData
 tileData = [ { file: "scifiEnvironment_01.png",
