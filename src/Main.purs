@@ -2,104 +2,94 @@ module Main where
 
 import Prelude
 
-import Control.Monad.Reader (ReaderT, ask, runReaderT)
+import Control.Monad.Reader (ReaderT, ask, local, runReaderT)
 import Control.Monad.Reader.Class (class MonadAsk)
+import Control.Monad.State (StateT(..), evalStateT, get, lift, put, runStateT)
 import Data.Foldable (for_)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Number.Format (toString)
-import Debug (traceM)
+import Debug (spy, traceM)
 import Effect (Effect)
 import Effect.AVar (AVar)
 import Effect.AVar (empty, new, tryPut, tryRead, tryTake) as EVar
 import Effect.Class (liftEffect)
 import Effect.Class.Console (log)
+import Event (initialCursor, tick)
+import Hero as Hero
 import P5 (Image, P5, draw, getP5, setup)
 import P5.Color (background2)
-import P5.Events.Keyboard (keyIsDown, keyPressed)
+import P5.Environment (pixelDensity2)
+import P5.Events.Keyboard (keyIsDown, keyPressed, keyReleased)
 import P5.Image (image, image2, loadImage)
 import P5.Rendering (createCanvas)
 import P5.Shape (ellipse)
 import P5.Types (ElementOrImage(..))
 import Prelude (Unit, bind, discard, map, pure, unit, ($), (-), (<>))
-import TileMap (TileMap(..), LoadedTile, tileMap)
+import TileMap (tileMap)
+import Types (AsyncState, Direction(..), GameState(..), LoadedTile, PreloadState, TileMap(..), dest, source)
 
 type AppState = {
   p5 :: P5
 }
 
-eVar :: Effect (AVar Pos)
-eVar = EVar.empty
-
 initialState :: Maybe AppState
 initialState = Nothing
 
-character :: P5 -> Image
-character p = loadImage p "assets/Robot/Tilesheet/character_robot_sheet.png" Nothing Nothing
-
 loadedTileMap :: P5 -> Array LoadedTile
-loadedTileMap p = map (\t -> { e: ElementOrImageImage (i t), loc: t.loc }) td
+loadedTileMap p = map (\t -> { e: ElementOrImageImage (i t),
+                               loc: t.loc,
+                               wall: t.wall}) td
   where
     TileMap basePath td = tileMap
     i t = loadImage p (basePath <> "/" <> t.file) Nothing Nothing
 
-type Pos = { x:: Number, y::Number }
-
-drawStep :: P5 -> AVar Pos -> Image -> Effect Unit
-drawStep p avar chr = do
-  newVal <- EVar.tryRead avar
-  case newVal of
-    Just nv -> do
-      image2 p (ElementOrImageImage $ chr) nv.x nv.y 48.0 64.0 0.0 512.0 (Just 96.0) (Just 128.0)
-    Nothing -> log "error"
-
-type State = { hero :: Image, tileMap :: Array LoadedTile }
+initAsyncState :: AsyncState
+initAsyncState = { event: initialCursor, location: Hero.initLoc }
 
 main :: Maybe AppState -> Effect (Maybe AppState)
 main a = do
     p <- maybe getP5 (\x -> pure x.p5) a
-    liftEffect $ runReaderT (mainR p) { hero: character p,
-                                        tileMap: loadedTileMap p }
+    aVar <- EVar.new initAsyncState
+    liftEffect $ runReaderT (mainS aVar) { p: p,
+                                           hero: Hero.img p,
+                                           tileMap: loadedTileMap p }
 
-preload :: forall m. MonadAsk State m => m State
+preload :: forall m. MonadAsk PreloadState m => m PreloadState
 preload = ask
 
-mainR :: P5 -> ReaderT State Effect (Maybe AppState)
-mainR p = do
-  st <- preload
-  liftEffect $ mainInner st p
+mainS :: AVar AsyncState -> ReaderT PreloadState Effect (Maybe AppState)
+mainS aVar = do
+  ps <- preload
+  liftEffect do
+    setup ps.p do
+      _ <- createCanvas ps.p 320.0 180.0 Nothing
+      pure unit
 
-mainInner :: State -> P5 -> Effect (Maybe AppState)
-mainInner st p = do
-  let initPos = { x: 100.0, y: 100.0}
+    keyPressed ps.p do
+      oldM <- EVar.tryTake aVar
+      event <- tick ps.p
+      let old = fromMaybe initAsyncState oldM
+      res <- EVar.tryPut old { event = event } aVar
+      traceM res
+      pure false
 
-  eVarInner <- EVar.new initPos
+    keyReleased ps.p do
+      oldM <- EVar.tryTake aVar
+      let old = fromMaybe initAsyncState oldM
+      void $ EVar.tryPut old { event = None } aVar
+      pure false
 
-  setup p do
-    _ <- createCanvas p 800.0 800.0 Nothing
-    pure unit
+    draw ps.p do
+      asM <- EVar.tryTake aVar
+      let as = fromMaybe initAsyncState asM
+      background2 ps.p [135.0, 206.0, 205.0]
+      for_ ps.tileMap \n -> do
+        let src = source n.loc
+        let dst = dest n.loc
+        image2 ps.p n.e dst.xpos dst.ypos dst.w dst.h src.xpos src.ypos (Just src.w) (Just src.h)
+      ellipse ps.p (100.0) 200.0 100.0 $ Just 50.0
+      asNew <- Hero.draw (GameState ps as)
+      void $ EVar.tryPut asNew aVar
+      -- drawStep st.p st.eventTick st.hero
 
-  keyPressed p do
-    let l = keyIsDown p 37.0
-    mNewPos <- EVar.tryTake eVarInner
-    let newPos = fromMaybe initPos mNewPos
-    res <- case mNewPos of
-      Just res -> do
-        log $ toString res.x
-        EVar.tryPut { x: res.x - 5.0, y: res.y } eVarInner
-      Nothing -> pure false
-    traceM res
-    pure false
-
-  draw p do
-    background2 p [135.0, 206.0, 205.0]
-    for_ st.tileMap \n ->
-      image p n.e n.loc.xpos n.loc.ypos (Just n.loc.w) (Just n.loc.h)
-    ellipse p (100.0) 200.0 100.0 $ Just 50.0
-
-    drawStep p eVarInner st.hero
-    pure unit
-
-
-  --   image2 p (ElementOrImageImage $ character p) newPos.x newPos.y 48.0 64.0 0.0 512.0 (Just 96.0) (Just 128.0)
-
-  pure $ Just { p5: p }
+  pure $ Just { p5: ps.p }

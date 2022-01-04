@@ -5,6 +5,7 @@ You can edit this file as you like.
 { name = "malm"
 , dependencies =
   [ "aff"
+  , "arrays"
   , "avar"
   , "console"
   , "control"
@@ -12,12 +13,14 @@ You can edit this file as you like.
   , "effect"
   , "foldable-traversable"
   , "integers"
+  , "math"
   , "maybe"
   , "numbers"
   , "p5"
   , "prelude"
   , "psci-support"
   , "transformers"
+  , "tuples"
   , "web-html"
   ]
 , packages = ./packages.dhall

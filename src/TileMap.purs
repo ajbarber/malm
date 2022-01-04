@@ -4,7 +4,7 @@ import Prelude
 
 import Data.Int (toNumber)
 import Data.Number.Format (toString)
-import P5.Types (ElementOrImage)
+import Types (Location(..), TileData, TileMap(..))
 
 formatInt :: Int -> String
 formatInt i = case (i < 10) of
@@ -13,27 +13,16 @@ formatInt i = case (i < 10) of
   where
     asStr = toString <<< toNumber
 
-type TileData = { file :: String,
-              loc :: TileLoc,
-              wall :: Boolean }
-
-type TileLoc ={ w :: Number,
-                h :: Number,
-                xpos :: Number,
-                ypos :: Number }
-
-type LoadedTile = { e :: ElementOrImage, loc :: TileLoc }
-
-data TileMap = TileMap String (Array TileData)
-
 tileMap :: TileMap
-tileMap = TileMap "assets/PNG/Retina/Environment" tileData
+tileMap = TileMap "assets" tileData
 
 tileData :: Array TileData
-tileData = [ { file: "scifiEnvironment_01.png",
-              loc: { w: 64.0, h: 64.0, xpos: 64.0, ypos: 64.0 },
-              wall: false},
-           { file: "scifiEnvironment_06.png",
-              loc: { w: 64.0, h: 64.0, xpos: 100.0, ypos:64.0 },
-              wall: false }
-          ]
+tileData = [ { file: "Overworld.png",
+               loc: Location  { w: 16.0, h: 16.0, xpos: 0.0, ypos: 0.0 }
+                              { w: 16.0, h: 16.0, xpos: 0.0, ypos: 0.0 },
+               wall: false},
+             { file: "Overworld.png",
+               loc: Location { w: 80.0, h: 96.0, xpos: 96.0, ypos: 0.0}
+                             { w: 80.0, h: 96.0, xpos: 0.0, ypos: 48.0},
+               wall: true }
+           ]
