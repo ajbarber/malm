@@ -5,20 +5,22 @@ import Prelude
 import Control.Monad.Reader (ReaderT, ask, local, runReaderT)
 import Control.Monad.Reader.Class (class MonadAsk)
 import Control.Monad.State (StateT(..), evalStateT, get, lift, put, runStateT)
+import Data.Array (cons)
 import Data.Foldable (for_)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Number.Format (toString)
+import Data.Tuple (Tuple(..), snd, fst)
 import Debug (spy, traceM)
 import Effect (Effect)
 import Effect.AVar (AVar)
 import Effect.AVar (empty, new, tryPut, tryRead, tryTake) as EVar
 import Effect.Class (liftEffect)
 import Effect.Class.Console (log)
-import Event (initialCursor, tick)
+import Event (direction, initialCursor, keys)
 import Hero as Hero
 import P5 (Image, P5, draw, getP5, setup)
 import P5.Color (background2)
-import P5.Environment (pixelDensity2)
+import P5.Environment (frameRate, frameRate2, pixelDensity2)
 import P5.Events.Keyboard (keyIsDown, keyPressed, keyReleased)
 import P5.Image (image, image2, loadImage)
 import P5.Rendering (createCanvas)
@@ -57,27 +59,26 @@ main a = do
 preload :: forall m. MonadAsk PreloadState m => m PreloadState
 preload = ask
 
+handleEvent :: PreloadState -> AVar AsyncState -> Effect Boolean
+handleEvent ps aVar = do
+  oldM <- EVar.tryTake aVar
+  let old = fromMaybe initAsyncState oldM
+  newDir <- keys ps.p old.event
+  _ <- EVar.tryPut old { event = newDir } aVar
+  pure false
+
 mainS :: AVar AsyncState -> ReaderT PreloadState Effect (Maybe AppState)
 mainS aVar = do
   ps <- preload
   liftEffect do
+    frameRate2 ps.p 60.0
+
     setup ps.p do
       _ <- createCanvas ps.p 320.0 180.0 Nothing
       pure unit
 
-    keyPressed ps.p do
-      oldM <- EVar.tryTake aVar
-      event <- tick ps.p
-      let old = fromMaybe initAsyncState oldM
-      res <- EVar.tryPut old { event = event } aVar
-      traceM res
-      pure false
-
-    keyReleased ps.p do
-      oldM <- EVar.tryTake aVar
-      let old = fromMaybe initAsyncState oldM
-      void $ EVar.tryPut old { event = None } aVar
-      pure false
+    keyPressed ps.p (handleEvent ps aVar)
+    keyReleased ps.p (handleEvent ps aVar)
 
     draw ps.p do
       asM <- EVar.tryTake aVar

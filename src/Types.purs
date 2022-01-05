@@ -1,10 +1,16 @@
 module Types where
 
+import Data.Array.NonEmpty (singleton, NonEmptyArray)
+import Data.Tuple (Tuple)
+import Data.Eq (class Eq)
+
 import P5.Types (Image, P5, ElementOrImage)
 
 data Direction = Left | Right | Down | Up | None
 
-type EventTick = Direction
+derive instance eqDirection :: Eq Direction
+
+type EventTick = Array Direction
 
 type PreloadState = { p :: P5,
                       hero :: Image,

@@ -1,23 +1,22 @@
 module Hero where
 
+import Control.Category ((<<<))
 import Data.Array (any, filter)
+import Data.Eq ((/=))
 import Data.Int (floor, toNumber)
 import Data.Maybe (Maybe(..))
 import Data.Number.Format (toString)
-import Data.Tuple (Tuple(..), fst, snd)
 import Effect (Effect)
-import Effect.Class.Console (log)
-import Math ((%))
+import Event (direction)
+import Math ((%), log)
+import P5.Environment (frameCount)
 import P5.Image (image2, loadImage)
 import P5.Types (Image, P5, ElementOrImage(..))
-import Prelude (discard, pure, ($), (&&), (*), (+), (-), (/), (<), (<<<), (<>), (>))
+import Prelude (bind, discard, pure, ($), (&&), (*), (+), (-), (/), (<), (<>), (==), (>), (||))
 import Types (AsyncState, Coords, Cut(..), Direction(..), GameState(..), Location(..), PreloadState, Source, slot, dest)
 
 file :: String
 file = "assets/character.png"
-
-nCuts :: Number
-nCuts = 4.0
 
 width :: Number
 width = 320.0
@@ -45,7 +44,11 @@ delta = 1.0
 draw :: GameState -> Effect AsyncState
 draw (GameState ps as) = do
   let pos = position as
-  let srcPos = offset $ toCut as
+  i <- frameCount ps.p
+  let iNum = toNumber i
+  let static = (direction as.event) == None
+  let i' = if static then 0.0 else iNum
+  let srcPos = offset i' $ toCut as
   let newPos = case (isCollision ps pos) of
         true -> dest as.location
         false -> pos
@@ -58,22 +61,22 @@ draw (GameState ps as) = do
     srcPos.ypos
     (Just srcPos.w)
     (Just srcPos.h)
-  log $ "x:" <> toString pos.xpos <> "y" <> toString pos.ypos
   pure as { location = Location srcPos newPos }
 
 toCut :: AsyncState -> AsyncState
-toCut as = let src = slot cuts as.event in
+toCut as = let src = slot cuts (direction as.event) in
   as { location = Location src (dest as.location) }
 
-offset :: AsyncState -> Source
-offset as =  src { xpos = src.xpos + (dampen (dst.ypos + dst.xpos) % 3.0) * src.w }
+offset :: Number -> AsyncState -> Source
+offset frame as = do
+  src { xpos = src.xpos + (dampen frame) % 4.0 * src.w }
   where
-    dampen x = toNumber $ (floor $ x / 10.0) * 10
+    dampen x = x - x % 5.0
     Location src dst = as.location
 
 position :: AsyncState -> Coords
 position st = let coords = dest st.location in
-  case st.event of
+  case (direction st.event) of
     Left -> coords { xpos = coords.xpos - delta }
     Right -> coords { xpos = coords.xpos + delta }
     Up -> coords { ypos = coords.ypos - delta }
