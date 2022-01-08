@@ -1,20 +1,15 @@
 module Hero where
 
-import Control.Category ((<<<))
 import Data.Array (any, filter)
-import Data.Eq ((/=))
-import Data.Int (floor, toNumber)
+import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
-import Data.Number.Format (toString)
-import Data.Tuple (Tuple(..))
-import Data.Tuple.Nested ((/\))
 import Effect (Effect)
 import Event (direction)
-import Math ((%), log)
+import Math ((%))
 import P5.Environment (frameCount)
 import P5.Image (image2, loadImage)
 import P5.Types (Image, P5, ElementOrImage(..))
-import Prelude (bind, discard, pure, ($), (&&), (*), (+), (-), (/), (<), (<>), (==), (>), (||))
+import Prelude (bind, discard, pure, ($), (&&), (*), (+), (-), (<), (==), (>))
 import Types (AsyncState, Coords, Cut(..), Direction(..), GameState(..), Location(..), PreloadState, Source, slot, dest)
 
 file :: String
@@ -37,7 +32,7 @@ img p = loadImage p file Nothing Nothing
 initLoc :: Location
 initLoc = Location source dest
   where
-    dest = { xpos: 200.0, ypos: 0.0, w: 16.0, h: 32.0 }
+    dest = { xpos: 0.0, ypos: 0.0, w: 16.0, h: 32.0 }
     source = { xpos: 0.0,  ypos: 0.0, w: 16.0, h: 32.0 }
 
 delta :: Number
@@ -97,5 +92,7 @@ isCollision ps loc = any (\x -> collision loc (dest x.loc)) (walls ps.tileMap)
 collision :: Coords -> Coords -> Boolean
 collision loc tileLoc = xCollision && yCollision
    where
-     xCollision = loc.xpos + loc.w > tileLoc.xpos && (loc.xpos < tileLoc.xpos + tileLoc.w)
-     yCollision = loc.ypos + loc.h > tileLoc.ypos && (loc.ypos < tileLoc.ypos + tileLoc.h)
+     xCollision = loc.xpos + loc.w > tileLoc.xpos &&
+                  (loc.xpos < tileLoc.xpos + tileLoc.w)
+     yCollision = loc.ypos + loc.h > tileLoc.ypos &&
+                  (loc.ypos < tileLoc.ypos + tileLoc.h)
