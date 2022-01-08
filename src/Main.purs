@@ -19,16 +19,19 @@ import Effect.Class.Console (log)
 import Event (direction, initialCursor, keys)
 import Hero as Hero
 import P5 (Image, P5, draw, getP5, setup)
-import P5.Color (background2)
+import P5.Color (background2, fill)
 import P5.Environment (frameRate, frameRate2, pixelDensity2)
 import P5.Events.Keyboard (keyIsDown, keyPressed, keyReleased)
 import P5.Image (image, image2, loadImage)
 import P5.Rendering (createCanvas)
 import P5.Shape (ellipse)
+import P5.Text (text)
 import P5.Types (ElementOrImage(..))
+import P5.Typography (textSize)
 import Prelude (Unit, bind, discard, map, pure, unit, ($), (-), (<>))
 import TileMap (tileMap)
 import Types (AsyncState, Direction(..), GameState(..), LoadedTile, PreloadState, TileMap(..), dest, source)
+import World as World
 
 type AppState = {
   p5 :: P5
@@ -84,13 +87,13 @@ mainS aVar = do
       asM <- EVar.tryTake aVar
       let as = fromMaybe initAsyncState asM
       background2 ps.p [135.0, 206.0, 205.0]
-      for_ ps.tileMap \n -> do
-        let src = source n.loc
-        let dst = dest n.loc
-        image2 ps.p n.e dst.xpos dst.ypos dst.w dst.h src.xpos src.ypos (Just src.w) (Just src.h)
-      ellipse ps.p (100.0) 200.0 100.0 $ Just 50.0
+      void $ World.draw (GameState ps as)
       asNew <- Hero.draw (GameState ps as)
+      -- -- text
+      -- let heroPos = dest as.location
+      -- log $ toString heroPos.xpos
+      -- log $ toString heroPos.ypos
+      --- text
       void $ EVar.tryPut asNew aVar
-      -- drawStep st.p st.eventTick st.hero
 
   pure $ Just { p5: ps.p }

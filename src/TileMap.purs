@@ -2,10 +2,14 @@ module TileMap where
 
 import Prelude
 
+import Data.Argonaut.Core (Json)
+import Data.Argonaut.Decode (JsonDecodeError, decodeJson, parseJson)
 import Data.Array (range)
+import Data.Either (Either(..))
 import Data.Int (toNumber)
 import Data.Number.Format (toString)
-import Types (Location(..), TileData, TileMap(..))
+import ExampleMaps (lindsayMap)
+import Types (Location(..), TileData, TileMap(..), InputCoordMap)
 
 formatInt :: Int -> String
 formatInt i = case (i < 10) of
@@ -14,24 +18,25 @@ formatInt i = case (i < 10) of
   where
     asStr = toString <<< toNumber
 
+placeholderMap :: String
+placeholderMap = lindsayMap
+
+tileMapIn :: Either JsonDecodeError (Array InputCoordMap)
+tileMapIn = decodeJson =<< parseJson  placeholderMap
+
+toTileData :: Either JsonDecodeError (Array InputCoordMap) -> Array TileData
+toTileData icm = case icm of
+  Left e -> []
+  Right arr -> map (\x -> {
+    file: "Overworld.png",
+    loc: Location x.src x.dest,
+    wall: x.wall }) arr
+
 tileMap :: TileMap
 tileMap = TileMap "assets" tileData
 
 tileData :: Array TileData
-tileData = grassRow 16 0.0 <>
-           grassRow 16 16.0 <>
-           [ grass2 164.0 0.0,
-             rocks 156.0 0.0,
-             grass2 228.0 0.0,
-             grass2 268.0 0.0,
-             rocks2 0.0 15.0,
-             stream 0.0 32.0,
-             stream 32.0 32.0,
-             { file: "Overworld.png",
-               loc: Location { w: 80.0, h: 96.0, xpos: 96.0, ypos: 0.0}
-                             { w: 80.0, h: 96.0, xpos: 0.0, ypos: 48.0},
-               wall: true }
-           ]
+tileData = toTileData tileMapIn
 
 grassRow :: Int -> Number -> Array TileData
 grassRow width y = map (\i -> grass i y) xs

@@ -1,9 +1,11 @@
 module Types where
 
+import Data.Argonaut.Core (Json)
+import Data.Argonaut.Decode (JsonDecodeError, decodeJson)
 import Data.Array.NonEmpty (singleton, NonEmptyArray)
-import Data.Tuple (Tuple)
+import Data.Either (Either)
 import Data.Eq (class Eq)
-
+import Data.Tuple (Tuple)
 import P5.Types (Image, P5, ElementOrImage)
 
 data Direction = Left | Right | Down | Up | None
@@ -25,6 +27,11 @@ type Coords ={ w :: Number,
                h :: Number,
                xpos :: Number,
                ypos :: Number }
+
+type InputCoordMap = { src :: Coords, dest :: Coords, wall :: Boolean }
+
+coordFromJson :: Json -> Either JsonDecodeError InputCoordMap
+coordFromJson = decodeJson
 
 type Dest = Coords
 type Source = Coords

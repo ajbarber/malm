@@ -6,6 +6,8 @@ import Data.Eq ((/=))
 import Data.Int (floor, toNumber)
 import Data.Maybe (Maybe(..))
 import Data.Number.Format (toString)
+import Data.Tuple (Tuple(..))
+import Data.Tuple.Nested ((/\))
 import Effect (Effect)
 import Event (direction)
 import Math ((%), log)
@@ -43,8 +45,8 @@ delta = 1.0
 
 draw :: GameState -> Effect AsyncState
 draw (GameState ps as) = do
-  let pos = position as
   i <- frameCount ps.p
+  let pos = position i as
   let iNum = toNumber i
   let static = (direction as.event) == None
   let i' = if static then 0.0 else iNum
@@ -71,17 +73,17 @@ offset :: Number -> AsyncState -> Source
 offset frame as = do
   src { xpos = src.xpos + (dampen frame) % 4.0 * src.w }
   where
-    dampen x = x - x % 5.0
+    dampen x = x - x % 9.0
     Location src dst = as.location
 
-position :: AsyncState -> Coords
-position st = let coords = dest st.location in
-  case (direction st.event) of
-    Left -> coords { xpos = coords.xpos - delta }
-    Right -> coords { xpos = coords.xpos + delta }
-    Up -> coords { ypos = coords.ypos - delta }
-    Down -> coords { ypos = coords.ypos + delta }
-    None -> coords
+position :: Int -> AsyncState -> Coords
+position frame st = let coords = dest st.location in
+  case (toNumber frame % 2.0 == 0.0) /\ (direction st.event) of
+    true /\ Left -> coords { xpos = coords.xpos - delta }
+    true /\ Right -> coords { xpos = coords.xpos + delta }
+    true /\ Up -> coords { ypos = coords.ypos - delta }
+    true /\ Down -> coords { ypos = coords.ypos + delta }
+    _ /\ _ -> coords
 
 isCollision :: PreloadState -> Coords -> Boolean
 isCollision ps loc = any (\x -> collision loc (dest x.loc)) (walls ps.tileMap)
