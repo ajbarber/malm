@@ -43,17 +43,21 @@ initLoc = Location source dest
 delta :: Number
 delta = 1.0
 
+shouldDraw :: Int -> Boolean
+shouldDraw frame = toNumber frame % 2.0 == 0.0
+
 draw :: GameState -> Effect AsyncState
 draw (GameState ps as) = do
   i <- frameCount ps.p
-  let pos = position i as
+  let curPos = dest as.location
+  let newPos' = if (shouldDraw i) then position as else curPos
   let iNum = toNumber i
   let static = (direction as.event) == None
   let i' = if static then 0.0 else iNum
   let srcPos = offset i' $ toCut as
-  let newPos = case (isCollision ps pos) of
-        true -> dest as.location
-        false -> pos
+  let newPos = case (isCollision ps newPos') of
+        true -> curPos
+        false -> newPos'
   image2 ps.p (ElementOrImageImage $ ps.hero)
     newPos.xpos
     newPos.ypos
@@ -76,14 +80,14 @@ offset frame as = do
     dampen x = x - x % 9.0
     Location src dst = as.location
 
-position :: Int -> AsyncState -> Coords
-position frame st = let coords = dest st.location in
-  case (toNumber frame % 2.0 == 0.0) /\ (direction st.event) of
-    true /\ Left -> coords { xpos = coords.xpos - delta }
-    true /\ Right -> coords { xpos = coords.xpos + delta }
-    true /\ Up -> coords { ypos = coords.ypos - delta }
-    true /\ Down -> coords { ypos = coords.ypos + delta }
-    _ /\ _ -> coords
+position :: AsyncState -> Coords
+position st = let coords = dest st.location in
+  case (direction st.event) of
+    Left -> coords { xpos = coords.xpos - delta }
+    Right -> coords { xpos = coords.xpos + delta }
+    Up -> coords { ypos = coords.ypos - delta }
+    Down -> coords { ypos = coords.ypos + delta }
+    None -> coords
 
 isCollision :: PreloadState -> Coords -> Boolean
 isCollision ps loc = any (\x -> collision loc (dest x.loc)) (walls ps.tileMap)
