@@ -9,7 +9,8 @@ import Math ((%))
 import P5.Environment (frameCount)
 import P5.Image (image2, loadImage)
 import P5.Types (Image, P5, ElementOrImage(..))
-import Prelude (bind, discard, pure, ($), (&&), (*), (+), (-), (<), (==), (>))
+import Prelude (bind, discard, pure, ($), (&&), (*), (+), (-), (<), (==), (>), (<$>), (<*>), flip)
+import Record as Record
 import Types (AsyncState, Coords, Cut(..), Direction(..), GameState(..), Location(..), PreloadState, Source, slot, dest)
 
 file :: String
@@ -18,8 +19,11 @@ file = "assets/character.png"
 width :: Number
 width = 320.0
 
-cuts :: Cut
-cuts = Cut l r u d
+baseOffset :: { xoffset :: Number, yoffset :: Number }
+baseOffset = { xoffset: 0.0, yoffset: 0.0}
+
+cuts :: Cut Coords
+cuts = (flip Record.merge baseOffset) <$> Cut l r u d
   where
     l = { xpos: 0.0,  ypos: 96.0, w: 16.0, h: 32.0 }
     r = { xpos: 0.0,  ypos: 32.0, w: 16.0, h: 32.0 }
@@ -29,10 +33,10 @@ cuts = Cut l r u d
 img :: P5 -> Image
 img p = loadImage p file Nothing Nothing
 
-initLoc :: Location
-initLoc = Location source dest
+initLoc :: Location Coords
+initLoc = (flip Record.merge baseOffset) <$> Location source dest
   where
-    dest = { xpos: 0.0, ypos: 0.0, w: 16.0, h: 32.0 }
+    dest = { xpos: 0.0, ypos: 0.0, w: 16.0, h: 32.0  }
     source = { xpos: 0.0,  ypos: 0.0, w: 16.0, h: 32.0 }
 
 delta :: Number
