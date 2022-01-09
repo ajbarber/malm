@@ -36,7 +36,7 @@ img p = loadImage p file Nothing Nothing
 initLoc :: Location Coords
 initLoc = (flip Record.merge baseOffset) <$> Location source dest
   where
-    dest = { xpos: 0.0, ypos: 0.0, w: 16.0, h: 32.0  }
+    dest = { xpos: 160.0, ypos: 74.0, w: 16.0, h: 32.0  }
     source = { xpos: 0.0,  ypos: 0.0, w: 16.0, h: 32.0 }
 
 delta :: Number
@@ -82,10 +82,10 @@ offset frame as = do
 position :: AsyncState -> Coords
 position st = let coords = dest st.location in
   case (direction st.event) of
-    Left -> coords { xpos = coords.xpos - delta }
-    Right -> coords { xpos = coords.xpos + delta }
-    Up -> coords { ypos = coords.ypos - delta }
-    Down -> coords { ypos = coords.ypos + delta }
+    Left -> coords { xoffset = coords.xoffset - delta }
+    Right -> coords { xoffset = coords.xoffset + delta }
+    Up -> coords { yoffset = coords.yoffset - delta }
+    Down -> coords { yoffset = coords.yoffset + delta }
     None -> coords
 
 isCollision :: PreloadState -> Coords -> Boolean

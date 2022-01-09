@@ -23,5 +23,5 @@ draw (GameState ps as) = do
 offset :: Coords -> Coords -> Tuple Number Number
 offset hero world = Tuple trans1 trans2
   where
-    trans1 = world.xpos - hero.xpos
-    trans2 = world.ypos - hero.ypos
+    trans1 = world.xpos - hero.xoffset
+    trans2 = world.ypos - hero.yoffset
