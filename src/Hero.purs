@@ -9,9 +9,9 @@ import Math ((%))
 import P5.Environment (frameCount)
 import P5.Image (image2, loadImage)
 import P5.Types (Image, P5, ElementOrImage(..))
-import Prelude (bind, discard, pure, ($), (&&), (*), (+), (-), (<), (==), (>), (<$>), (<*>), flip)
+import Prelude (Unit, bind, discard, flip, pure, ($), (&&), (*), (+), (-), (<), (<$>), (<*>), (==), (>))
 import Record as Record
-import Types (AsyncState, Coords, Cut(..), Direction(..), GameState(..), Location(..), PreloadState, Source, slot, dest)
+import Types (AsyncState, Coords, Cut(..), Direction(..), GameState(..), Location(..), PreloadState, Source, dest, offsetX, offsetY, slot)
 
 file :: String
 file = "assets/character.png"
@@ -42,14 +42,14 @@ initLoc = (flip Record.merge baseOffset) <$> Location source dest
 delta :: Number
 delta = 1.0
 
-shouldDraw :: Int -> Boolean
-shouldDraw frame = toNumber frame % 2.0 == 0.0
+shouldUpdate :: Int -> Boolean
+shouldUpdate frame = toNumber frame % 2.0 == 0.0
 
-draw :: GameState -> Effect AsyncState
-draw (GameState ps as) = do
+update :: GameState -> Effect GameState
+update (GameState ps as) = do
   i <- frameCount ps.p
   let curPos = dest as.location
-  let newPos' = if (shouldDraw i) then position as else curPos
+  let newPos' = if (shouldUpdate i) then position as else curPos
   let iNum = toNumber i
   let static = (direction as.event) == None
   let i' = if static then 0.0 else iNum
@@ -57,6 +57,10 @@ draw (GameState ps as) = do
   let newPos = case (isCollision ps newPos') of
         true -> curPos
         false -> newPos'
+  pure $ GameState ps (as { location = Location srcPos newPos })
+
+draw :: GameState -> Effect Unit
+draw (GameState ps as) = do
   image2 ps.p (ElementOrImageImage $ ps.hero)
     newPos.xpos
     newPos.ypos
@@ -66,7 +70,7 @@ draw (GameState ps as) = do
     srcPos.ypos
     (Just srcPos.w)
     (Just srcPos.h)
-  pure as { location = Location srcPos newPos }
+  where Location srcPos newPos = as.location
 
 toCut :: AsyncState -> AsyncState
 toCut as = let src = slot cuts (direction as.event) in
@@ -96,7 +100,7 @@ isCollision ps loc = any (\x -> collision loc (dest x.loc)) (walls ps.tileMap)
 collision :: Coords -> Coords -> Boolean
 collision loc tileLoc = xCollision && yCollision
    where
-     xCollision = loc.xpos + loc.w > tileLoc.xpos &&
-                  (loc.xpos < tileLoc.xpos + tileLoc.w)
-     yCollision = loc.ypos + loc.h > tileLoc.ypos &&
-                  (loc.ypos < tileLoc.ypos + tileLoc.h)
+     xCollision = offsetX loc + loc.w > tileLoc.xpos &&
+                  (offsetX loc < tileLoc.xpos + tileLoc.w)
+     yCollision = offsetY loc + loc.h > tileLoc.ypos &&
+                  (offsetY loc < tileLoc.ypos + tileLoc.h)

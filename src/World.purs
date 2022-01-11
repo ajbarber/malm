@@ -10,9 +10,12 @@ import Math (floor)
 import P5.Image (image2)
 import Types (AsyncState, GameState(..), Coords, dest, source)
 
-draw :: GameState -> Effect AsyncState
+update :: GameState -> Effect GameState
+update as = pure as
+
+draw :: GameState -> Effect Unit
 draw (GameState ps as) = do
-  as <$ for_ ps.tileMap \n -> do
+  for_ ps.tileMap \n -> do
     let src = source n.loc
     let dst = dest n.loc
     let heroPos = dest as.location

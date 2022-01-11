@@ -87,13 +87,9 @@ mainS aVar = do
       asM <- EVar.tryTake aVar
       let as = fromMaybe initAsyncState asM
       background2 ps.p [135.0, 206.0, 205.0]
-      void $ World.draw (GameState ps as)
-      asNew <- Hero.draw (GameState ps as)
-      -- -- text
-      -- let heroPos = dest as.location
-      -- log $ toString heroPos.xpos
-      -- log $ toString heroPos.ypos
-      --- text
-      void $ EVar.tryPut asNew aVar
+      GameState ps' as' <- World.update (GameState ps as) >>= Hero.update
+      World.draw (GameState ps' as')
+      Hero.draw (GameState ps' as')
+      void $ EVar.tryPut as' aVar
 
   pure $ Just { p5: ps.p }

@@ -8,7 +8,7 @@ import Data.Array (range)
 import Data.Either (Either(..))
 import Data.Int (toNumber)
 import Data.Number.Format (toString)
-import ExampleMaps (lindsayMap)
+import ExampleMaps (dMap, lMap)
 import Hero as Hero
 import Record as Record
 import Types (Location(..), TileData, TileMap(..), InputCoordMap)
@@ -21,7 +21,7 @@ formatInt i = case (i < 10) of
     asStr = toString <<< toNumber
 
 placeholderMap :: String
-placeholderMap = lindsayMap
+placeholderMap = dMap
 
 tileMapIn :: Either JsonDecodeError (Array InputCoordMap)
 tileMapIn = decodeJson =<< parseJson  placeholderMap

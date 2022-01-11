@@ -72,3 +72,9 @@ slot (Cut l r u d) dir = case dir of
   Up -> u
   Down -> d
   None-> d
+
+offsetX :: Coords -> Number
+offsetX coords = coords.xpos + coords.xoffset
+
+offsetY :: Coords -> Number
+offsetY coords = coords.ypos + coords.yoffset
