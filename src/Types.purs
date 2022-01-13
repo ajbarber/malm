@@ -1,12 +1,14 @@
 module Types where
 
 import Prelude
+
 import Data.Argonaut.Core (Json)
 import Data.Argonaut.Decode (JsonDecodeError, decodeJson)
 import Data.Array.NonEmpty (singleton, NonEmptyArray)
 import Data.Either (Either)
 import Data.Eq (class Eq)
 import Data.Tuple (Tuple)
+import P5 (Element)
 import P5.Types (Image, P5, ElementOrImage)
 
 data Direction = Left | Right | Down | Up | None
@@ -17,7 +19,8 @@ type EventTick = Array Direction
 
 type PreloadState = { p :: P5,
                       hero :: Image,
-                      tileMap :: Array LoadedTile }
+                      tileMap :: Array LoadedTile,
+                      backBuffer :: Element }
 
 type AsyncState = { event :: EventTick,
                     location :: Location Coords }

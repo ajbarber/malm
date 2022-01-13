@@ -3,13 +3,16 @@ module Hero where
 import Data.Array (any, filter)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
+import Data.Number.Format (toString)
 import Effect (Effect)
+import Effect.Class.Console (log)
 import Event (direction)
-import Math ((%))
+import Malm.P5.Environment (deltaTime)
+import Math ((%), floor)
 import P5.Environment (frameCount)
 import P5.Image (image2, loadImage)
 import P5.Types (Image, P5, ElementOrImage(..))
-import Prelude (Unit, bind, discard, flip, pure, ($), (&&), (*), (+), (-), (<), (<$>), (<*>), (==), (>))
+import Prelude (Unit, bind, discard, flip, pure, ($), (&&), (*), (+), (-), (/), (<), (<$>), (<*>), (==), (>))
 import Record as Record
 import Types (AsyncState, Coords, Cut(..), Direction(..), GameState(..), Location(..), PreloadState, Source, dest, offsetX, offsetY, slot)
 
@@ -36,25 +39,23 @@ img p = loadImage p file Nothing Nothing
 initLoc :: Location Coords
 initLoc = (flip Record.merge baseOffset) <$> Location source dest
   where
-    dest = { xpos: 160.0, ypos: 74.0, w: 16.0, h: 32.0  }
+    dest = { xpos: 160.0, ypos: 62.0, w: 16.0, h: 32.0  }
     source = { xpos: 0.0,  ypos: 0.0, w: 16.0, h: 32.0 }
 
-delta :: Number
-delta = 1.0
-
-shouldUpdate :: Int -> Boolean
-shouldUpdate frame = toNumber frame % 2.0 == 0.0
+-- delta :: Number
+-- delta = 1.0
 
 update :: GameState -> Effect GameState
 update (GameState ps as) = do
+  num <- deltaTime ps.p
   i <- frameCount ps.p
   let curPos = dest as.location
-  let newPos' = if (shouldUpdate i) then position as else curPos
-  let iNum = toNumber i
-  let static = (direction as.event) == None
-  let i' = if static then 0.0 else iNum
-  let srcPos = offset i' $ toCut as
-  let newPos = case (isCollision ps newPos') of
+      newPos' =  position (num/10.0) as
+      iNum = toNumber i
+      static = (direction as.event) == None
+      i' = if static then 0.0 else iNum
+      srcPos = offset i' $ toCut as
+      newPos = case (isCollision ps newPos') of
         true -> curPos
         false -> newPos'
   pure $ GameState ps (as { location = Location srcPos newPos })
@@ -78,13 +79,13 @@ toCut as = let src = slot cuts (direction as.event) in
 
 offset :: Number -> AsyncState -> Source
 offset frame as = do
-  src { xpos = src.xpos + (dampen frame) % 4.0 * src.w }
+  src { xpos = src.xpos + (dampen frame) % 2.0 * src.w }
   where
     dampen x = x - x % 9.0
     Location src dst = as.location
 
-position :: AsyncState -> Coords
-position st = let coords = dest st.location in
+position :: Number -> AsyncState -> Coords
+position delta st = let coords = dest st.location in
   case (direction st.event) of
     Left -> coords { xoffset = coords.xoffset - delta }
     Right -> coords { xoffset = coords.xoffset + delta }

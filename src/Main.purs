@@ -23,7 +23,7 @@ import P5.Color (background2, fill)
 import P5.Environment (frameRate, frameRate2, pixelDensity2)
 import P5.Events.Keyboard (keyIsDown, keyPressed, keyReleased)
 import P5.Image (image, image2, loadImage)
-import P5.Rendering (createCanvas)
+import P5.Rendering (createCanvas, createGraphics)
 import P5.Shape (ellipse)
 import P5.Text (text)
 import P5.Types (ElementOrImage(..))
@@ -31,6 +31,7 @@ import P5.Typography (textSize)
 import Prelude (Unit, bind, discard, map, pure, unit, ($), (-), (<>))
 import TileMap (tileMap)
 import Types (AsyncState, Direction(..), GameState(..), LoadedTile, PreloadState, TileMap(..), dest, source)
+import Unsafe.Coerce (unsafeCoerce)
 import World as World
 
 type AppState = {
@@ -57,7 +58,8 @@ main a = do
     aVar <- EVar.new initAsyncState
     liftEffect $ runReaderT (mainS aVar) { p: p,
                                            hero: Hero.img p,
-                                           tileMap: loadedTileMap p }
+                                           tileMap: loadedTileMap p,
+                                           backBuffer: unsafeCoerce $ createGraphics p 320.0 180.0 Nothing }
 
 preload :: forall m. MonadAsk PreloadState m => m PreloadState
 preload = ask
@@ -82,11 +84,10 @@ mainS aVar = do
 
     keyPressed ps.p (handleEvent ps aVar)
     keyReleased ps.p (handleEvent ps aVar)
-
     draw ps.p do
       asM <- EVar.tryTake aVar
       let as = fromMaybe initAsyncState asM
-      background2 ps.p [135.0, 206.0, 205.0]
+      --background2 ps.p [135.0, 206.0, 205.0]
       GameState ps' as' <- World.update (GameState ps as) >>= Hero.update
       World.draw (GameState ps' as')
       Hero.draw (GameState ps' as')
