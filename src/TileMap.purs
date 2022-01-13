@@ -7,11 +7,26 @@ import Data.Argonaut.Decode (JsonDecodeError, decodeJson, parseJson)
 import Data.Array (range)
 import Data.Either (Either(..))
 import Data.Int (toNumber)
+import Data.Maybe (Maybe(..))
 import Data.Number.Format (toString)
+import Data.Traversable (traverse)
+import Effect.Aff (Aff)
 import ExampleMaps (dMap, lMap)
 import Hero as Hero
+import Image (loadImg)
 import Record as Record
-import Types (Location(..), TileData, TileMap(..), InputCoordMap)
+import Types (InputCoordMap, Location(..), TileData, TileMap(..), LoadedTile)
+
+loadedTileMap :: Aff (Array LoadedTile)
+loadedTileMap = do
+  traverse (\t -> do
+     img <- loadImg (i t)
+     pure { e: img,
+            loc: t.loc,
+            wall: t.wall}) td
+  where
+    TileMap basePath td = tileMap
+    i t = (basePath <> "/" <> t.file)
 
 formatInt :: Int -> String
 formatInt i = case (i < 10) of

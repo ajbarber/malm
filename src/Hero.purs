@@ -2,17 +2,12 @@ module Hero where
 
 import Data.Array (any, filter)
 import Data.Int (toNumber)
-import Data.Maybe (Maybe(..))
-import Data.Number.Format (toString)
+import Data.Time.Duration (Milliseconds(..))
 import Effect (Effect)
-import Effect.Class.Console (log)
 import Event (direction)
-import Malm.P5.Environment (deltaTime)
-import Math ((%), floor)
-import P5.Environment (frameCount)
-import P5.Image (image2, loadImage)
-import P5.Types (Image, P5, ElementOrImage(..))
-import Prelude (Unit, bind, discard, flip, pure, ($), (&&), (*), (+), (-), (/), (<), (<$>), (<*>), (==), (>))
+import Graphics.Canvas (drawImageFull)
+import Math ((%))
+import Prelude (Unit, flip, pure, ($), (&&), (*), (+), (-), (/), (<), (<$>), (==), (>))
 import Record as Record
 import Types (AsyncState, Coords, Cut(..), Direction(..), GameState(..), Location(..), PreloadState, Source, dest, offsetX, offsetY, slot)
 
@@ -33,9 +28,6 @@ cuts = (flip Record.merge baseOffset) <$> Cut l r u d
     u = { xpos: 0.0,  ypos: 64.0, w: 16.0, h: 32.0 }
     d = { xpos: 0.0,  ypos: 0.0, w: 16.0, h: 32.0 }
 
-img :: P5 -> Image
-img p = loadImage p file Nothing Nothing
-
 initLoc :: Location Coords
 initLoc = (flip Record.merge baseOffset) <$> Location source dest
   where
@@ -47,10 +39,9 @@ initLoc = (flip Record.merge baseOffset) <$> Location source dest
 
 update :: GameState -> Effect GameState
 update (GameState ps as) = do
-  num <- deltaTime ps.p
-  i <- frameCount ps.p
-  let curPos = dest as.location
-      newPos' =  position (num/10.0) as
+  let i = ps.frameCount
+      curPos = dest as.location
+      newPos' =  position (Milliseconds 1.0) as
       iNum = toNumber i
       static = (direction as.event) == None
       i' = if static then 0.0 else iNum
@@ -62,15 +53,15 @@ update (GameState ps as) = do
 
 draw :: GameState -> Effect Unit
 draw (GameState ps as) = do
-  image2 ps.p (ElementOrImageImage $ ps.hero)
+  drawImageFull ps.ctx ps.hero
+    srcPos.xpos
+    srcPos.ypos
+    srcPos.w
+    srcPos.h
     newPos.xpos
     newPos.ypos
     newPos.w
     newPos.h
-    srcPos.xpos
-    srcPos.ypos
-    (Just srcPos.w)
-    (Just srcPos.h)
   where Location srcPos newPos = as.location
 
 toCut :: AsyncState -> AsyncState
@@ -84,13 +75,14 @@ offset frame as = do
     dampen x = x - x % 9.0
     Location src dst = as.location
 
-position :: Number -> AsyncState -> Coords
-position delta st = let coords = dest st.location in
+position :: Milliseconds -> AsyncState -> Coords
+position (Milliseconds delta') st = let
+  coords = dest st.location in
   case (direction st.event) of
-    Left -> coords { xoffset = coords.xoffset - delta }
-    Right -> coords { xoffset = coords.xoffset + delta }
-    Up -> coords { yoffset = coords.yoffset - delta }
-    Down -> coords { yoffset = coords.yoffset + delta }
+    Left -> coords { xoffset = coords.xoffset - delta' }
+    Right -> coords { xoffset = coords.xoffset + delta' }
+    Up -> coords { yoffset = coords.yoffset - delta' }
+    Down -> coords { yoffset = coords.yoffset + delta' }
     None -> coords
 
 isCollision :: PreloadState -> Coords -> Boolean

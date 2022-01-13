@@ -5,11 +5,12 @@ import Prelude
 import Data.Argonaut.Core (Json)
 import Data.Argonaut.Decode (JsonDecodeError, decodeJson)
 import Data.Array.NonEmpty (singleton, NonEmptyArray)
+import Data.DateTime.Instant (Instant)
 import Data.Either (Either)
 import Data.Eq (class Eq)
+import Data.Time.Duration (Milliseconds(..))
 import Data.Tuple (Tuple)
-import P5 (Element)
-import P5.Types (Image, P5, ElementOrImage)
+import Graphics.Canvas (CanvasImageSource, Context2D)
 
 data Direction = Left | Right | Down | Up | None
 
@@ -17,10 +18,12 @@ derive instance eqDirection :: Eq Direction
 
 type EventTick = Array Direction
 
-type PreloadState = { p :: P5,
-                      hero :: Image,
+type PreloadState = { ctx :: Context2D,
+                      hero :: CanvasImageSource,
                       tileMap :: Array LoadedTile,
-                      backBuffer :: Element }
+                      deltaTime :: Milliseconds,
+                      frameCount :: Int
+                    }
 
 type AsyncState = { event :: EventTick,
                     location :: Location Coords }
@@ -58,7 +61,7 @@ data Cut a = Cut a a a a
 
 derive instance cutFunctor :: Functor Cut
 
-type LoadedTile = { e :: ElementOrImage, loc :: Location Coords, wall :: Boolean }
+type LoadedTile = { e :: CanvasImageSource, loc :: Location Coords, wall :: Boolean }
 
 data TileMap = TileMap String (Array TileData)
 

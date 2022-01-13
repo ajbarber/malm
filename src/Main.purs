@@ -2,95 +2,108 @@ module Main where
 
 import Prelude
 
-import Control.Monad.Reader (ReaderT, ask, local, runReaderT)
+import Control.Monad.Reader (ReaderT, ask, runReaderT)
 import Control.Monad.Reader.Class (class MonadAsk)
-import Control.Monad.State (StateT(..), evalStateT, get, lift, put, runStateT)
-import Data.Array (cons)
-import Data.Foldable (for_)
-import Data.Maybe (Maybe(..), fromMaybe, maybe)
-import Data.Number.Format (toString)
-import Data.Tuple (Tuple(..), snd, fst)
-import Debug (spy, traceM)
+import Data.DateTime.Instant (unInstant)
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Time.Duration (negateDuration)
 import Effect (Effect)
 import Effect.AVar (AVar)
-import Effect.AVar (empty, new, tryPut, tryRead, tryTake) as EVar
+import Effect.AVar (tryPut, tryTake) as EVar
+import Effect.Aff (Aff, launchAff_)
+import Effect.Aff.AVar (new) as AVar
 import Effect.Class (liftEffect)
 import Effect.Class.Console (log)
-import Event (direction, initialCursor, keys)
+import Effect.Now (now)
+import Event (initialCursor, keys)
+import Graphics.Canvas (CanvasImageSource, getCanvasElementById, getContext2D)
 import Hero as Hero
-import P5 (Image, P5, draw, getP5, setup)
-import P5.Color (background2, fill)
-import P5.Environment (frameRate, frameRate2, pixelDensity2)
-import P5.Events.Keyboard (keyIsDown, keyPressed, keyReleased)
-import P5.Image (image, image2, loadImage)
-import P5.Rendering (createCanvas, createGraphics)
-import P5.Shape (ellipse)
-import P5.Text (text)
-import P5.Types (ElementOrImage(..))
-import P5.Typography (textSize)
-import Prelude (Unit, bind, discard, map, pure, unit, ($), (-), (<>))
-import TileMap (tileMap)
-import Types (AsyncState, Direction(..), GameState(..), LoadedTile, PreloadState, TileMap(..), dest, source)
-import Unsafe.Coerce (unsafeCoerce)
+import Image (loadImg)
+import TileMap (loadedTileMap)
+import Types (AsyncState, GameState(..), LoadedTile, PreloadState)
+import Web.Event.EventTarget (EventListener, addEventListener, eventListener)
+import Web.HTML (Window, window)
+import Web.HTML.Window (requestAnimationFrame)
+import Web.HTML.Window as Window
+import Web.UIEvent.KeyboardEvent.EventTypes (keydown, keyup)
 import World as World
-
-type AppState = {
-  p5 :: P5
-}
-
-initialState :: Maybe AppState
-initialState = Nothing
-
-loadedTileMap :: P5 -> Array LoadedTile
-loadedTileMap p = map (\t -> { e: ElementOrImageImage (i t),
-                               loc: t.loc,
-                               wall: t.wall}) td
-  where
-    TileMap basePath td = tileMap
-    i t = loadImage p (basePath <> "/" <> t.file) Nothing Nothing
 
 initAsyncState :: AsyncState
 initAsyncState = { event: initialCursor, location: Hero.initLoc }
 
-main :: Maybe AppState -> Effect (Maybe AppState)
-main a = do
-    p <- maybe getP5 (\x -> pure x.p5) a
-    aVar <- EVar.new initAsyncState
-    liftEffect $ runReaderT (mainS aVar) { p: p,
-                                           hero: Hero.img p,
-                                           tileMap: loadedTileMap p,
-                                           backBuffer: unsafeCoerce $ createGraphics p 320.0 180.0 Nothing }
+mainEffect ::
+  AVar AsyncState ->
+  CanvasImageSource ->
+  Array LoadedTile ->
+  Effect Unit
+mainEffect aVar hero tiles = do
+  id <- getCanvasElementById "main"
+  case id of
+    Just id' -> do
+      ctx <- getContext2D id'
+      t <- liftEffect now
+      runReaderT (mainS aVar) {
+        deltaTime: unInstant t,
+        frameCount: 0,
+        ctx: ctx,
+        hero: hero,
+        tileMap: tiles }
+    Nothing -> log "Canvas element not found"
+
+main :: Effect Unit
+main = launchAff_ mainA
+
+mainA :: Aff Unit
+mainA = do
+  aVar <- AVar.new initAsyncState
+  img <- loadImg Hero.file
+  tileMap <- loadedTileMap
+  liftEffect $ mainEffect aVar img tileMap
 
 preload :: forall m. MonadAsk PreloadState m => m PreloadState
 preload = ask
 
-handleEvent :: PreloadState -> AVar AsyncState -> Effect Boolean
-handleEvent ps aVar = do
+handleEvent :: Boolean -> AVar AsyncState ->  Effect EventListener
+handleEvent keydown aVar = eventListener $ \e -> do
   oldM <- EVar.tryTake aVar
   let old = fromMaybe initAsyncState oldM
-  newDir <- keys ps.p old.event
+  newDir <- keys keydown e old.event
   _ <- EVar.tryPut old { event = newDir } aVar
-  pure false
+  pure unit
 
-mainS :: AVar AsyncState -> ReaderT PreloadState Effect (Maybe AppState)
+step :: Window -> AVar AsyncState -> PreloadState -> Effect Unit
+step w aVar ps = do
+  t <- liftEffect now
+  asM <- EVar.tryTake aVar
+  let as = fromMaybe initAsyncState asM
+  GameState ps' as' <- World.update (GameState (stepTime ps t) as) >>= Hero.update
+  World.draw (GameState ps' as')
+  Hero.draw (GameState ps' as')
+  void $ EVar.tryPut as' aVar
+  --traceM ps.deltaTime
+  void $ flip requestAnimationFrame w (void $ step w aVar ps')
+  where
+    stepTime state time = state {
+      deltaTime = unInstant time <> negateDuration (state.deltaTime),
+      frameCount = state.frameCount + 1
+      }
+
+mainS :: AVar AsyncState -> ReaderT PreloadState Effect Unit
 mainS aVar = do
   ps <- preload
   liftEffect do
-    frameRate2 ps.p 60.0
+    w <- window
 
-    setup ps.p do
-      _ <- createCanvas ps.p 320.0 180.0 Nothing
-      pure unit
+    keyDownHandler <- handleEvent true aVar
+    keyUpHandler <- handleEvent false aVar
+    windowTarget <- map Window.toEventTarget window
 
-    keyPressed ps.p (handleEvent ps aVar)
-    keyReleased ps.p (handleEvent ps aVar)
-    draw ps.p do
-      asM <- EVar.tryTake aVar
-      let as = fromMaybe initAsyncState asM
-      --background2 ps.p [135.0, 206.0, 205.0]
-      GameState ps' as' <- World.update (GameState ps as) >>= Hero.update
-      World.draw (GameState ps' as')
-      Hero.draw (GameState ps' as')
-      void $ EVar.tryPut as' aVar
+    addEventListener keydown keyDownHandler false windowTarget
+    addEventListener keyup keyUpHandler false windowTarget
 
-  pure $ Just { p5: ps.p }
+    void $ flip requestAnimationFrame w do
+      step w aVar ps
+
+    --removeEventListener keydown handler false windowTarget
+
+    pure unit
