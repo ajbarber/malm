@@ -11,24 +11,28 @@ import Data.Eq (class Eq)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Tuple (Tuple)
 import Graphics.Canvas (CanvasImageSource, Context2D)
+import Web.Event.Event (Event)
 
 data Direction = Left | Right | Down | Up | None
 
 derive instance eqDirection :: Eq Direction
 
-type EventTick = Array Direction
+type DirectionTick = Array Direction
 
-type PreloadState = { ctx :: Context2D,
+type State = { ctx :: Context2D,
                       hero :: CanvasImageSource,
                       tileMap :: Array LoadedTile,
                       deltaTime :: Milliseconds,
-                      frameCount :: Int
+                      frameCount :: Int,
+                      direction :: DirectionTick,
+                      location :: Location Coords
                     }
 
-type AsyncState = { event :: EventTick,
-                    location :: Location Coords }
+data EventType = KeyDown | KeyUp
 
-data GameState = GameState PreloadState AsyncState
+derive instance eqEventType :: Eq EventType
+
+type AsyncState =  Array (Tuple Event EventType)
 
 type Coords = ICoords Offset
 

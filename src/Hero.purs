@@ -9,7 +9,7 @@ import Graphics.Canvas (drawImageFull)
 import Math ((%))
 import Prelude (Unit, flip, pure, ($), (&&), (*), (+), (-), (/), (<), (<$>), (==), (>))
 import Record as Record
-import Types (AsyncState, Coords, Cut(..), Direction(..), GameState(..), Location(..), PreloadState, Source, dest, offsetX, offsetY, slot)
+import Types (AsyncState, Coords, Cut(..), Direction(..), State, Location(..), Source, dest, offsetX, offsetY, slot)
 
 file :: String
 file = "assets/character.png"
@@ -37,23 +37,23 @@ initLoc = (flip Record.merge baseOffset) <$> Location source dest
 -- delta :: Number
 -- delta = 1.0
 
-update :: GameState -> Effect GameState
-update (GameState ps as) = do
-  let i = ps.frameCount
-      curPos = dest as.location
-      newPos' =  position (Milliseconds 1.0) as
+update :: State -> Effect State
+update state = do
+  let i = state.frameCount
+      curPos = dest state.location
+      newPos' =  position (Milliseconds 1.0) state
       iNum = toNumber i
-      static = (direction as.event) == None
+      static = (direction state.direction) == None
       i' = if static then 0.0 else iNum
-      srcPos = offset i' $ toCut as
-      newPos = case (isCollision ps newPos') of
+      srcPos = offset i' $ toCut state
+      newPos = case (isCollision state newPos') of
         true -> curPos
         false -> newPos'
-  pure $ GameState ps (as { location = Location srcPos newPos })
+  pure $ state{ location = Location srcPos newPos }
 
-draw :: GameState -> Effect Unit
-draw (GameState ps as) = do
-  drawImageFull ps.ctx ps.hero
+draw :: State -> Effect Unit
+draw state = do
+  drawImageFull state.ctx state.hero
     srcPos.xpos
     srcPos.ypos
     srcPos.w
@@ -62,30 +62,30 @@ draw (GameState ps as) = do
     newPos.ypos
     newPos.w
     newPos.h
-  where Location srcPos newPos = as.location
+  where Location srcPos newPos = state.location
 
-toCut :: AsyncState -> AsyncState
-toCut as = let src = slot cuts (direction as.event) in
-  as { location = Location src (dest as.location) }
+toCut :: State -> State
+toCut state = let src = slot cuts (direction state.direction) in
+  state{ location = Location src (dest state.location) }
 
-offset :: Number -> AsyncState -> Source
-offset frame as = do
+offset :: Number -> State -> Source
+offset frame state = do
   src { xpos = src.xpos + (dampen frame) % 2.0 * src.w }
   where
     dampen x = x - x % 9.0
-    Location src dst = as.location
+    Location src dst = state.location
 
-position :: Milliseconds -> AsyncState -> Coords
+position :: Milliseconds -> State -> Coords
 position (Milliseconds delta') st = let
   coords = dest st.location in
-  case (direction st.event) of
+  case (direction st.direction) of
     Left -> coords { xoffset = coords.xoffset - delta' }
     Right -> coords { xoffset = coords.xoffset + delta' }
     Up -> coords { yoffset = coords.yoffset - delta' }
     Down -> coords { yoffset = coords.yoffset + delta' }
     None -> coords
 
-isCollision :: PreloadState -> Coords -> Boolean
+isCollision :: State -> Coords -> Boolean
 isCollision ps loc = any (\x -> collision loc (dest x.loc)) (walls ps.tileMap)
   where
     walls tm = filter _.wall tm

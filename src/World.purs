@@ -8,19 +8,19 @@ import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Graphics.Canvas (drawImageFull)
 import Math (floor)
-import Types (Coords, GameState(..), dest, source)
+import Types (Coords, State(..), dest, source)
 
-update :: GameState -> Effect GameState
+update :: State -> Effect State
 update gs = pure gs
 
-draw :: GameState -> Effect Unit
-draw (GameState ps as) = do
-  let heroPos = dest as.location
-  for_ (visible heroPos ps.tileMap) \n -> do
+draw :: State -> Effect Unit
+draw state = do
+  let heroPos = dest state.location
+  for_ (visible heroPos state.tileMap) \n -> do
     let src = source n.loc
         dst = dest n.loc
         Tuple x y = offset heroPos dst
-    drawImageFull ps.ctx n.e src.xpos src.ypos src.w src.h
+    drawImageFull state.ctx n.e src.xpos src.ypos src.w src.h
                   x y src.w src.h
              where
     visible heroPos tileMap = filter (\t -> let Tuple x y = offset heroPos (dest t.loc) in
