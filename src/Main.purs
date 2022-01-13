@@ -31,6 +31,16 @@ import World as World
 initAsyncState :: AsyncState
 initAsyncState = { event: initialCursor, location: Hero.initLoc }
 
+main :: Effect Unit
+main = launchAff_ mainA
+
+mainA :: Aff Unit
+mainA = do
+  aVar <- AVar.new initAsyncState
+  img <- loadImg Hero.file
+  tileMap <- loadedTileMap
+  liftEffect $ mainEffect aVar img tileMap
+
 mainEffect ::
   AVar AsyncState ->
   CanvasImageSource ->
@@ -49,16 +59,6 @@ mainEffect aVar hero tiles = do
         hero: hero,
         tileMap: tiles }
     Nothing -> log "Canvas element not found"
-
-main :: Effect Unit
-main = launchAff_ mainA
-
-mainA :: Aff Unit
-mainA = do
-  aVar <- AVar.new initAsyncState
-  img <- loadImg Hero.file
-  tileMap <- loadedTileMap
-  liftEffect $ mainEffect aVar img tileMap
 
 preload :: forall m. MonadAsk PreloadState m => m PreloadState
 preload = ask
@@ -80,7 +80,6 @@ step w aVar ps = do
   World.draw (GameState ps' as')
   Hero.draw (GameState ps' as')
   void $ EVar.tryPut as' aVar
-  --traceM ps.deltaTime
   void $ flip requestAnimationFrame w (void $ step w aVar ps')
   where
     stepTime state time = state {
