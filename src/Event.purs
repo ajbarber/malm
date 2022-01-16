@@ -2,7 +2,7 @@ module Event where
 
 import Prelude
 
-import Data.Array (cons, difference, dropEnd, filter, head, intersect)
+import Data.Array (cons, delete, difference, dropEnd, filter, head, intersect, nub, nubEq)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Tuple (Tuple(..))
 import Debug (traceM)
@@ -18,18 +18,17 @@ initialCursor = [ ]
 direction :: Array Direction -> Direction
 direction k = fromMaybe None (head k)
 
+fromKeyString :: String -> Direction
+fromKeyString str = case str of
+  "ArrowLeft" -> Left
+  "ArrowRight" -> Right
+  "ArrowUp" -> Up
+  "ArrowDown" -> Down
+  _ -> None
+
 keys :: Tuple Event EventType -> Array Direction -> Effect (Array Direction)
-keys (Tuple e evType) c = do
-  pure $ intersect cur n
+keys (Tuple e evType) c = pure case evType of
+  KeyDown -> [ fromKeyString k]
+  KeyUp ->  filter (\n -> n /= fromKeyString k) c
   where
-    isDown = evType == KeyDown
-    cur = case head newVal of
-      Nothing -> c
-      Just x -> cons x (dropEnd 1 c)
-    newVal = difference n c
     k = fromMaybe "" $ key <$> KBD.fromEvent e
-    n = filter (\x -> x /= None) [ l, r, u, d]
-    l = if k == "ArrowLeft" && isDown then Left else None
-    r = if k == "ArrowRight" && isDown then Right else None
-    u = if k == "ArrowUp"  && isDown then Up else None
-    d = if k == "ArrowDown"  && isDown then Down else None

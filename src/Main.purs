@@ -6,6 +6,7 @@ import Control.Monad.Reader (ReaderT, ask, runReaderT)
 import Control.Monad.Reader.Class (class MonadAsk)
 import Data.Array (cons, dropEnd, head, length)
 import Data.DateTime.Instant (unInstant)
+import Data.Foldable (for_)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Time.Duration (negateDuration)
 import Data.Tuple (Tuple(..))
@@ -22,7 +23,7 @@ import Graphics.Canvas (CanvasImageSource, getCanvasElementById, getContext2D)
 import Hero as Hero
 import Image (loadImg)
 import TileMap (loadedTileMap)
-import Types (AsyncState, EventType(..), State, LoadedTile)
+import Types (AsyncState, EventType(..), LoadedTile, State, LoadedTileMap)
 import Web.Event.EventTarget (EventListener, addEventListener, eventListener)
 import Web.HTML (Window, window)
 import Web.HTML.Window (requestAnimationFrame)
@@ -43,23 +44,21 @@ mainA = do
 mainEffect ::
   AVar AsyncState ->
   CanvasImageSource ->
-  Array LoadedTile ->
+  LoadedTileMap ->
   Effect Unit
 mainEffect aVar hero tiles = do
   id <- getCanvasElementById "main"
-  case id of
-    Just id' -> do
-      ctx <- getContext2D id'
-      t <- liftEffect now
-      runReaderT (mainS aVar) {
-        deltaTime: unInstant t,
-        frameCount: 0,
-        ctx: ctx,
-        hero: hero,
-        direction: [],
-        location: Hero.initLoc,
-        tileMap: tiles }
-    Nothing -> log "Canvas element not found"
+  for_ id \id' -> do
+    ctx <- getContext2D id'
+    t <- liftEffect now
+    runReaderT (mainS aVar) {
+      deltaTime: unInstant t,
+      frameCount: 0,
+      ctx: ctx,
+      hero: hero,
+      direction: [],
+      location: Hero.initLoc,
+      tileMap: tiles }
 
 preload :: forall m. MonadAsk State m => m State
 preload = ask
@@ -105,7 +104,5 @@ mainS aVar = do
 
     void $ flip requestAnimationFrame w do
       step w aVar ps
-
-    --removeEventListener keydown handler false windowTarget
 
     pure unit

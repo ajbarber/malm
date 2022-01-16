@@ -8,6 +8,8 @@ import Data.Array.NonEmpty (singleton, NonEmptyArray)
 import Data.DateTime.Instant (Instant)
 import Data.Either (Either)
 import Data.Eq (class Eq)
+import Data.Generic.Rep (class Generic)
+import Data.Show.Generic (genericShow)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Tuple (Tuple)
 import Graphics.Canvas (CanvasImageSource, Context2D)
@@ -17,15 +19,20 @@ data Direction = Left | Right | Down | Up | None
 
 derive instance eqDirection :: Eq Direction
 
+derive instance genericDirection :: Generic Direction _
+
+instance showDirection :: Show Direction where
+  show = genericShow
+
 type DirectionTick = Array Direction
 
 type State = { ctx :: Context2D,
-                      hero :: CanvasImageSource,
-                      tileMap :: Array LoadedTile,
-                      deltaTime :: Milliseconds,
-                      frameCount :: Int,
-                      direction :: DirectionTick,
-                      location :: Location Coords
+               hero :: CanvasImageSource,
+               tileMap :: LoadedTileMap,
+               deltaTime :: Milliseconds,
+               frameCount :: Int,
+               direction :: DirectionTick,
+               location :: Location Coords
                     }
 
 data EventType = KeyDown | KeyUp
@@ -69,6 +76,14 @@ type LoadedTile = { e :: CanvasImageSource, loc :: Location Coords, wall :: Bool
 
 data TileMap = TileMap String (Array TileData)
 
+type LoadedTileMap = {
+  xMin :: Number,
+  yMin :: Number,
+  xMax :: Number,
+  yMax :: Number,
+  tiles :: Array LoadedTile,
+  walls :: Array LoadedTile}
+
 dest :: Location Coords -> Coords
 dest (Location _ d) = d
 
@@ -82,9 +97,3 @@ slot (Cut l r u d) dir = case dir of
   Up -> u
   Down -> d
   None-> d
-
-offsetX :: Coords -> Number
-offsetX coords = coords.xpos + coords.xoffset
-
-offsetY :: Coords -> Number
-offsetY coords = coords.ypos + coords.yoffset

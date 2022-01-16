@@ -7,15 +7,18 @@ import Effect (Effect)
 import Event (direction)
 import Graphics.Canvas (drawImageFull)
 import Math ((%))
-import Prelude (Unit, flip, pure, ($), (&&), (*), (+), (-), (/), (<), (<$>), (==), (>))
+import Prelude
 import Record as Record
-import Types (AsyncState, Coords, Cut(..), Direction(..), State, Location(..), Source, dest, offsetX, offsetY, slot)
+import Types (AsyncState, Coords, Cut(..), Direction(..), State, Location(..), Source, dest, slot)
 
 file :: String
 file = "assets/character.png"
 
 width :: Number
-width = 320.0
+width = 16.0
+
+height :: Number
+height = 32.0
 
 baseOffset :: { xoffset :: Number, yoffset :: Number }
 baseOffset = { xoffset: 0.0, yoffset: 0.0}
@@ -23,19 +26,16 @@ baseOffset = { xoffset: 0.0, yoffset: 0.0}
 cuts :: Cut Coords
 cuts = (flip Record.merge baseOffset) <$> Cut l r u d
   where
-    l = { xpos: 0.0,  ypos: 96.0, w: 16.0, h: 32.0 }
-    r = { xpos: 0.0,  ypos: 32.0, w: 16.0, h: 32.0 }
-    u = { xpos: 0.0,  ypos: 64.0, w: 16.0, h: 32.0 }
-    d = { xpos: 0.0,  ypos: 0.0, w: 16.0, h: 32.0 }
+    l = { xpos: 0.0,  ypos: 96.0, w: width, h: height }
+    r = { xpos: 0.0,  ypos: 32.0, w: width, h: height }
+    u = { xpos: 0.0,  ypos: 64.0, w: width, h: height }
+    d = { xpos: 0.0,  ypos: 0.0, w: width, h: height }
 
 initLoc :: Location Coords
 initLoc = (flip Record.merge baseOffset) <$> Location source dest
   where
-    dest = { xpos: 160.0, ypos: 62.0, w: 16.0, h: 32.0  }
-    source = { xpos: 0.0,  ypos: 0.0, w: 16.0, h: 32.0 }
-
--- delta :: Number
--- delta = 1.0
+    dest = { xpos: 160.0, ypos: 62.0, w: width, h: height  }
+    source = { xpos: 0.0,  ypos: 0.0, w: width, h: height }
 
 update :: State -> Effect State
 update state = do
@@ -46,7 +46,7 @@ update state = do
       static = (direction state.direction) == None
       i' = if static then 0.0 else iNum
       srcPos = offset i' $ toCut state
-      newPos = case (isCollision state newPos') of
+      newPos = case (isCollision state newPos' || isBoundary state newPos') of
         true -> curPos
         false -> newPos'
   pure $ state{ location = Location srcPos newPos }
@@ -86,9 +86,14 @@ position (Milliseconds delta') st = let
     None -> coords
 
 isCollision :: State -> Coords -> Boolean
-isCollision ps loc = any (\x -> collision loc (dest x.loc)) (walls ps.tileMap)
-  where
-    walls tm = filter _.wall tm
+isCollision st loc = any (\x -> collision loc (dest x.loc)) st.tileMap.walls
+
+isBoundary :: State -> Coords -> Boolean
+isBoundary st loc =
+  offsetX loc <=  st.tileMap.xMin ||
+  offsetY loc <=  st.tileMap.yMin ||
+  offsetX loc >=  st.tileMap.xMax ||
+  offsetY loc >= st.tileMap.yMax
 
 collision :: Coords -> Coords -> Boolean
 collision loc tileLoc = xCollision && yCollision
@@ -97,3 +102,9 @@ collision loc tileLoc = xCollision && yCollision
                   (offsetX loc < tileLoc.xpos + tileLoc.w)
      yCollision = offsetY loc + loc.h > tileLoc.ypos &&
                   (offsetY loc < tileLoc.ypos + tileLoc.h)
+
+offsetX :: Coords -> Number
+offsetX coords = coords.xpos + coords.xoffset
+
+offsetY :: Coords -> Number
+offsetY coords = coords.ypos + coords.yoffset

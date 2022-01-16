@@ -4,10 +4,10 @@ import Prelude
 
 import Data.Argonaut.Core (Json)
 import Data.Argonaut.Decode (JsonDecodeError, decodeJson, parseJson)
-import Data.Array (range)
+import Data.Array (filter, fold, last, range, sort, tail)
 import Data.Either (Either(..))
 import Data.Int (toNumber)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (fromMaybe)
 import Data.Number.Format (toString)
 import Data.Traversable (traverse)
 import Effect.Aff (Aff)
@@ -15,10 +15,21 @@ import ExampleMaps (dMap, lMap)
 import Hero as Hero
 import Image (loadImg)
 import Record as Record
-import Types (InputCoordMap, Location(..), TileData, TileMap(..), LoadedTile)
+import Types (InputCoordMap, LoadedTile, Location(..), TileData, TileMap(..), LoadedTileMap, dest)
 
-loadedTileMap :: Aff (Array LoadedTile)
+loadedTileMap :: Aff LoadedTileMap
 loadedTileMap = do
+  arr <- loadedTiles
+  pure { tiles: arr,
+         xMin: 0.0,
+         yMin: -Hero.height/2.0,
+         xMax: xMax tileData + Hero.width,
+         yMax: yMax tileData + Hero.height/2.0,
+         walls: filter _.wall arr
+       }
+
+loadedTiles :: Aff (Array LoadedTile)
+loadedTiles = do
   traverse (\t -> do
      img <- loadImg (i t)
      pure { e: img,
@@ -54,3 +65,9 @@ tileMap = TileMap "assets" tileData
 
 tileData :: Array TileData
 tileData = toTileData tileMapIn
+
+xMax :: Array TileData -> Number
+xMax arr = fromMaybe 0.0 $ last $ sort $ map (\e -> (dest e.loc).xpos) arr
+
+yMax :: Array TileData -> Number
+yMax arr = fromMaybe 0.0 $ last $ sort $ map (\e -> (dest e.loc).ypos) arr

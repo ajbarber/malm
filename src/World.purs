@@ -6,7 +6,7 @@ import Data.Array (filter)
 import Data.Foldable (for_)
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
-import Graphics.Canvas (drawImageFull)
+import Graphics.Canvas (drawImageFull, fill, fillRect, setFillStyle)
 import Math (floor)
 import Types (Coords, State(..), dest, source)
 
@@ -16,7 +16,9 @@ update gs = pure gs
 draw :: State -> Effect Unit
 draw state = do
   let heroPos = dest state.location
-  for_ (visible heroPos state.tileMap) \n -> do
+  setFillStyle state.ctx "#43c443"
+  fillRect state.ctx { width: 320.0, height: 180.0, x:0.0, y:0.0 }
+  for_ (visible heroPos state.tileMap.tiles) \n -> do
     let src = source n.loc
         dst = dest n.loc
         Tuple x y = offset heroPos dst
