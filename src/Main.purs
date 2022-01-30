@@ -16,14 +16,13 @@ import Effect.AVar (tryPut, tryTake, tryRead) as EVar
 import Effect.Aff (Aff, launchAff_)
 import Effect.Aff.AVar (new) as AVar
 import Effect.Class (liftEffect)
-import Effect.Class.Console (log)
 import Effect.Now (now)
 import Event (keys)
 import Graphics.Canvas (CanvasImageSource, getCanvasElementById, getContext2D)
 import Hero as Hero
-import Image (loadImg)
+import Npc as Npc
 import TileMap (loadedTileMap)
-import Types (AsyncState, EventType(..), LoadedTile, State, LoadedTileMap)
+import Types (AsyncState, Direction(..), EventType(..), LoadedTileMap, State)
 import Web.Event.EventTarget (EventListener, addEventListener, eventListener)
 import Web.HTML (Window, window)
 import Web.HTML.Window (requestAnimationFrame)
@@ -37,16 +36,18 @@ main = launchAff_ mainA
 mainA :: Aff Unit
 mainA = do
   aVar <- AVar.new []
-  img <- loadImg Hero.file
+  heroImg <- Hero.load
+  npcImg <- Npc.load
   tileMap <- loadedTileMap
-  liftEffect $ mainEffect aVar img tileMap
+  liftEffect $ mainEffect aVar heroImg npcImg tileMap
 
 mainEffect ::
   AVar AsyncState ->
   CanvasImageSource ->
+  CanvasImageSource ->
   LoadedTileMap ->
   Effect Unit
-mainEffect aVar hero tiles = do
+mainEffect aVar hero npc tiles = do
   id <- getCanvasElementById "main"
   for_ id \id' -> do
     ctx <- getContext2D id'
@@ -55,9 +56,16 @@ mainEffect aVar hero tiles = do
       deltaTime: unInstant t,
       frameCount: 0,
       ctx: ctx,
-      hero: hero,
-      direction: [],
-      location: Hero.initLoc,
+      hero: {
+        img: hero,
+        direction: [],
+        location: Hero.initLoc
+        },
+      npc: {
+        img: npc,
+        direction: [ Up ],
+        location: Npc.initLoc
+      },
       tileMap: tiles }
 
 preload :: forall m. MonadAsk State m => m State
@@ -76,17 +84,18 @@ step w aVar state = do
   t <- liftEffect now
   event <- EVar.tryRead aVar
   dir <- case (head $ fromMaybe [] event) of
-    Just ev -> keys ev state.direction
-    Nothing -> pure state.direction
-  state' <- World.update (stepSt state t dir) >>= Hero.update
+    Just ev -> keys ev state.hero.direction
+    Nothing -> pure state.hero.direction
+  state' <- World.update (stepSt state t dir) >>= Hero.update >>= Npc.update
   World.draw state'
+  Npc.draw state'
   Hero.draw state'
   void $ flip requestAnimationFrame w (void $ step w aVar state')
   where
     stepSt st time dir = st {
       deltaTime = unInstant time <> negateDuration (st.deltaTime),
       frameCount = st.frameCount + 1,
-      direction = dir
+      hero { direction = dir }
       }
 
 mainS :: AVar AsyncState -> ReaderT State Effect Unit

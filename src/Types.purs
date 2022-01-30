@@ -4,13 +4,10 @@ import Prelude
 
 import Data.Argonaut.Core (Json)
 import Data.Argonaut.Decode (JsonDecodeError, decodeJson)
-import Data.Array.NonEmpty (singleton, NonEmptyArray)
-import Data.DateTime.Instant (Instant)
 import Data.Either (Either)
-import Data.Eq (class Eq)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
-import Data.Time.Duration (Milliseconds(..))
+import Data.Time.Duration (Milliseconds)
 import Data.Tuple (Tuple)
 import Graphics.Canvas (CanvasImageSource, Context2D)
 import Web.Event.Event (Event)
@@ -26,14 +23,19 @@ instance showDirection :: Show Direction where
 
 type DirectionTick = Array Direction
 
+type SpriteState = {
+  img :: CanvasImageSource,
+  location :: Location Coords,
+  direction :: DirectionTick
+}
+
 type State = { ctx :: Context2D,
-               hero :: CanvasImageSource,
                tileMap :: LoadedTileMap,
                deltaTime :: Milliseconds,
                frameCount :: Int,
-               direction :: DirectionTick,
-               location :: Location Coords
-                    }
+               hero :: SpriteState,
+               npc :: SpriteState
+             }
 
 data EventType = KeyDown | KeyUp
 
@@ -97,3 +99,10 @@ slot (Cut l r u d) dir = case dir of
   Up -> u
   Down -> d
   None-> d
+
+reverse :: Direction -> Direction
+reverse Up = Down
+reverse Down = Up
+reverse Left = Right
+reverse Right = Left
+reverse None = None

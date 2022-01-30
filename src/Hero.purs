@@ -1,15 +1,19 @@
 module Hero where
 
+import Prelude
+
 import Data.Array (any, filter)
 import Data.Int (toNumber)
 import Data.Time.Duration (Milliseconds(..))
 import Effect (Effect)
+import Effect.Aff (Aff)
 import Event (direction)
-import Graphics.Canvas (drawImageFull)
+import Graphics.Canvas (CanvasImageSource, drawImageFull)
+import Image (loadImg)
+import Location (dampen, toCut, isCollision, isBoundary, position)
 import Math ((%))
-import Prelude
 import Record as Record
-import Types (AsyncState, Coords, Cut(..), Direction(..), State, Location(..), Source, dest, slot)
+import Types (AsyncState, Coords, Cut(..), Direction(..), Location(..), Source, State, SpriteState, dest, slot)
 
 file :: String
 file = "assets/character.png"
@@ -22,6 +26,9 @@ height = 32.0
 
 baseOffset :: { xoffset :: Number, yoffset :: Number }
 baseOffset = { xoffset: 0.0, yoffset: 0.0}
+
+load :: Aff CanvasImageSource
+load = loadImg file
 
 cuts :: Cut Coords
 cuts = (flip Record.merge baseOffset) <$> Cut l r u d
@@ -40,20 +47,21 @@ initLoc = (flip Record.merge baseOffset) <$> Location source dest
 update :: State -> Effect State
 update state = do
   let i = state.frameCount
-      curPos = dest state.location
-      newPos' =  position (Milliseconds 1.0) state
+      hero = state.hero
+      curPos = dest hero.location
+      newPos' =  position (Milliseconds 1.0) state.hero
       iNum = toNumber i
-      static = (direction state.direction) == None
+      static = (direction hero.direction) == None
       i' = if static then 0.0 else iNum
-      srcPos = offset i' $ toCut state
+      srcPos = dampen i' $ toCut hero.location hero.direction cuts
       newPos = case (isCollision state newPos' || isBoundary state newPos') of
         true -> curPos
         false -> newPos'
-  pure $ state{ location = Location srcPos newPos }
+  pure $ state{ hero{ location = Location srcPos newPos }}
 
 draw :: State -> Effect Unit
 draw state = do
-  drawImageFull state.ctx state.hero
+  drawImageFull state.ctx state.hero.img
     srcPos.xpos
     srcPos.ypos
     srcPos.w
@@ -62,49 +70,4 @@ draw state = do
     newPos.ypos
     newPos.w
     newPos.h
-  where Location srcPos newPos = state.location
-
-toCut :: State -> State
-toCut state = let src = slot cuts (direction state.direction) in
-  state{ location = Location src (dest state.location) }
-
-offset :: Number -> State -> Source
-offset frame state = do
-  src { xpos = src.xpos + (dampen frame) % 2.0 * src.w }
-  where
-    dampen x = x - x % 9.0
-    Location src dst = state.location
-
-position :: Milliseconds -> State -> Coords
-position (Milliseconds delta') st = let
-  coords = dest st.location in
-  case (direction st.direction) of
-    Left -> coords { xoffset = coords.xoffset - delta' }
-    Right -> coords { xoffset = coords.xoffset + delta' }
-    Up -> coords { yoffset = coords.yoffset - delta' }
-    Down -> coords { yoffset = coords.yoffset + delta' }
-    None -> coords
-
-isCollision :: State -> Coords -> Boolean
-isCollision st loc = any (\x -> collision loc (dest x.loc)) st.tileMap.walls
-
-isBoundary :: State -> Coords -> Boolean
-isBoundary st loc =
-  offsetX loc <=  st.tileMap.xMin ||
-  offsetY loc <=  st.tileMap.yMin ||
-  offsetX loc >=  st.tileMap.xMax ||
-  offsetY loc >= st.tileMap.yMax
-
-collision :: Coords -> Coords -> Boolean
-collision loc tileLoc = xCollision && yCollision
-   where
-     xCollision = offsetX loc + loc.w > tileLoc.xpos &&
-                  (offsetX loc < tileLoc.xpos + tileLoc.w)
-     yCollision = offsetY loc + loc.h > tileLoc.ypos &&
-                  (offsetY loc < tileLoc.ypos + tileLoc.h)
-
-offsetX :: Coords -> Number
-offsetX coords = coords.xpos + coords.xoffset
-
-offsetY :: Coords -> Number
-offsetY coords = coords.ypos + coords.yoffset
+  where Location srcPos newPos = state.hero.location
