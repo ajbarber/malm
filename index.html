@@ -2,17 +2,21 @@
 <head>
     <title>Malm</title>
     <style>
-        body {
-          width: 320px;
-          height: 180px;
-          margin: 0px auto;
-          font-family: 'Courier New', Courier, monospace;
-          transform: scale(3);
-          overflow: hidden;
-        }
-        canvas {
-          image-rendering: pixelated;
-        }
+      @font-face {
+        font-family: pixel;
+        src: url("https://dl.dropboxusercontent.com/s/hsdwvz761xqphhb/pixel.ttf");
+      }
+      body {
+        width: 320px;
+        height: 180px;
+        margin: 0px auto;
+        font-family: pixel;
+        transform: scale(3.0);
+        overflow: hidden;
+      }
+      canvas {
+        image-rendering: pixelated;
+      }
     </style>
 </head>
 <body>

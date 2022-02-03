@@ -6,12 +6,13 @@ import Data.Int (toNumber)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Tuple (Tuple(..))
 import Debug (traceM)
+import Drawing as D
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Event (direction)
-import Graphics.Canvas (CanvasImageSource, drawImageFull)
+import Graphics.Canvas (CanvasImageSource, Rectangle, drawImageFull, strokeRect)
 import Image (loadImg)
-import Location (offset, dampen, toCut, isCollision, isBoundary, position)
+import Location (dampen, isBlocked, isBoundary, isObstacle, offset, position, toCut)
 import Math (floor)
 import Record as Record
 import Types (Coords, Cut(..), Direction(..), Location(..), State, dest, reverse)
@@ -55,7 +56,7 @@ update state = do
       static = (direction npc.direction) == None
       i' = if static then 0.0 else iNum
       srcPos = dampen i' $ toCut npc.location npc.direction cuts
-      blocked = (isCollision state newPos' || isBoundary state newPos')
+      blocked = isBlocked state newPos'
       newPos = case blocked of
         true -> curPos
         false -> newPos'
@@ -67,17 +68,10 @@ update state = do
 
 draw :: State -> Effect Unit
 draw state = do
-  drawImageFull state.ctx state.npc.img
-    srcPos.xpos
-    srcPos.ypos
-    srcPos.w
-    srcPos.h
-    (x + dst.xoffset)
-    (y + dst.yoffset)
-    newPos.w
-    newPos.h
+  strokeRect state.ctx $ {
+    x: newPos.xpos, y: newPos.ypos,
+    width: newPos.w, height:  newPos.h }
+
+  D.draw state state.npc
   where
-    dst = dest state.npc.location
-    heroPos = dest state.hero.location
-    Tuple x y = offset heroPos dst
-    Location srcPos newPos = state.npc.location
+    Location _ newPos = state.npc.location

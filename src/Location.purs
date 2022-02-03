@@ -7,7 +7,7 @@ import Data.Time.Duration (Milliseconds(..))
 import Data.Tuple (Tuple(..))
 import Event (direction)
 import Math ((%), floor)
-import Types (Coords, Cut, Direction(..), Location(..), Source, SpriteState, State, dest, slot)
+import Types (Coords, Cut, Direction(..), Location(..), Source, SpriteState, State, Vertex(..), dest, slot, toVertices)
 
 dampen :: Number -> Location Coords -> Source
 dampen frame location = do
@@ -46,8 +46,15 @@ position (Milliseconds delta') st = let
     Down -> coords { yoffset = coords.yoffset + delta' }
     None -> coords
 
+isBlocked :: State -> Coords -> Boolean
+isBlocked st loc = isObstacle st loc || isBoundary st loc
+
+isObstacle :: State -> Coords -> Boolean
+isObstacle st loc = any (\x -> collision loc (dest x.location) loc.xoffset loc.yoffset) st.tileMap.walls
+
 isCollision :: State -> Coords -> Boolean
-isCollision st loc = any (\x -> collision loc (dest x.loc)) st.tileMap.walls
+isCollision st loc = let npcLoc = dest st.npc.location in
+  collision2 (toVertices loc) npcLoc 0.0 0.0
 
 isBoundary :: State -> Coords -> Boolean
 isBoundary st loc =
@@ -56,10 +63,22 @@ isBoundary st loc =
   offsetX loc >=  st.tileMap.xMax ||
   offsetY loc >= st.tileMap.yMax
 
-collision :: Coords -> Coords -> Boolean
-collision loc tileLoc = xCollision && yCollision
+-- Note that offset is applied to the first location passed
+collision :: Coords -> Coords -> Number -> Number -> Boolean
+collision loc1 loc2 xoff yoff = xCollision && yCollision
    where
-     xCollision = offsetX loc + loc.w > tileLoc.xpos &&
-                  (offsetX loc < tileLoc.xpos + tileLoc.w)
-     yCollision = offsetY loc + loc.h > tileLoc.ypos &&
-                  (offsetY loc < tileLoc.ypos + tileLoc.h)
+     xCollision = loc1.xpos + xoff + loc1.w > loc2.xpos &&
+                  (loc1.xpos + xoff < loc2.xpos + loc2.w)
+     yCollision = loc1.ypos + yoff + loc1.h > loc2.ypos &&
+                  (loc1.ypos + yoff < loc2.ypos + loc2.h)
+
+-- tests if any of the vertices supplied fall within the rectangle defined by
+-- loc xoff yoff
+collision2 :: Array Vertex -> Coords -> Number -> Number -> Boolean
+collision2 vertices loc xoff yoff =
+  let loc' = loc { xpos = loc.xpos - xoff, ypos = loc.ypos - yoff } in
+  any (hasVertex loc') vertices
+
+hasVertex :: Coords -> Vertex -> Boolean
+hasVertex { xpos, ypos, w, h} (Vertex x y) =
+  x < xpos + w && x > xpos && y < ypos + h && y > ypos

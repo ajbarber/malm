@@ -32,8 +32,8 @@ loadedTiles :: Aff (Array LoadedTile)
 loadedTiles = do
   traverse (\t -> do
      img <- loadImg (i t)
-     pure { e: img,
-            loc: t.loc,
+     pure { img: img,
+            location: t.loc,
             wall: t.wall}) td
   where
     TileMap basePath td = tileMap

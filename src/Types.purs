@@ -6,6 +6,7 @@ import Data.Argonaut.Core (Json)
 import Data.Argonaut.Decode (JsonDecodeError, decodeJson)
 import Data.Either (Either)
 import Data.Generic.Rep (class Generic)
+import Data.Maybe (Maybe)
 import Data.Show.Generic (genericShow)
 import Data.Time.Duration (Milliseconds)
 import Data.Tuple (Tuple)
@@ -23,10 +24,19 @@ instance showDirection :: Show Direction where
 
 type DirectionTick = Array Direction
 
+data AnimationType = Damage | Dying
+
+type Animation = {
+  frames :: Int,
+  type_ :: AnimationType
+}
+
 type SpriteState = {
   img :: CanvasImageSource,
   location :: Location Coords,
-  direction :: DirectionTick
+  direction :: DirectionTick,
+  health :: Int,
+  animation :: Maybe Animation
 }
 
 type State = { ctx :: Context2D,
@@ -42,6 +52,8 @@ data EventType = KeyDown | KeyUp
 derive instance eqEventType :: Eq EventType
 
 type AsyncState =  Array (Tuple Event EventType)
+
+data Vertex = Vertex Number Number
 
 type Coords = ICoords Offset
 
@@ -74,7 +86,7 @@ data Cut a = Cut a a a a
 
 derive instance cutFunctor :: Functor Cut
 
-type LoadedTile = { e :: CanvasImageSource, loc :: Location Coords, wall :: Boolean }
+type LoadedTile = { img :: CanvasImageSource, location :: Location Coords, wall :: Boolean }
 
 data TileMap = TileMap String (Array TileData)
 
@@ -106,3 +118,10 @@ reverse Down = Up
 reverse Left = Right
 reverse Right = Left
 reverse None = None
+
+toVertices :: Coords -> Array Vertex
+toVertices { xpos, ypos, h, w } = [
+  Vertex xpos ypos,
+  Vertex xpos (ypos + h),
+  Vertex (xpos + w) ypos,
+  Vertex (xpos + w) (ypos + h) ]

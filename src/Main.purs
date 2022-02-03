@@ -18,7 +18,7 @@ import Effect.Aff.AVar (new) as AVar
 import Effect.Class (liftEffect)
 import Effect.Now (now)
 import Event (keys)
-import Graphics.Canvas (CanvasImageSource, getCanvasElementById, getContext2D)
+import Graphics.Canvas (CanvasImageSource, getCanvasElementById, getContext2D, scale)
 import Hero as Hero
 import Npc as Npc
 import TileMap (loadedTileMap)
@@ -59,12 +59,16 @@ mainEffect aVar hero npc tiles = do
       hero: {
         img: hero,
         direction: [],
-        location: Hero.initLoc
+        location: Hero.initLoc,
+        animation: Nothing,
+        health: 100
         },
       npc: {
         img: npc,
         direction: [ Up ],
-        location: Npc.initLoc
+        location: Npc.initLoc,
+        animation: Nothing,
+        health: 100
       },
       tileMap: tiles }
 
