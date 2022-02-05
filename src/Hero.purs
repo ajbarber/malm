@@ -2,21 +2,18 @@ module Hero where
 
 import Prelude
 
-import Data.Array (any, filter)
-import Data.Foldable (fold, for_, traverse_)
+import Data.Foldable (for_)
 import Data.Int (toNumber)
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..))
 import Data.Time.Duration (Milliseconds(..))
 import Effect (Effect)
 import Effect.Aff (Aff)
-import Effect.Aff.Compat (EffectFnCb)
 import Event (direction)
 import Graphics.Canvas (CanvasImageSource, drawImageFull, strokeRect)
 import Image (loadImg)
-import Location (dampen, isBoundary, isCollision, isObstacle, position, toCut)
-import Math ((%))
+import Location (collision', dampen, isCollision, isObstacle, position, toCut)
 import Record as Record
-import Types (AnimationType(..), AsyncState, Coords, Cut(..), Direction(..), Location(..), Source, SpriteState, State, Animation, dest, slot)
+import Types (Animation, AnimationType(..), Coords, Cut(..), Direction(..), Location(..), State, dest)
 
 file :: String
 file = "assets/character.png"
@@ -50,17 +47,18 @@ initLoc = (flip Record.merge baseOffset) <$> Location source dest
 update :: State -> Effect State
 update state = do
   let hero = state.hero
-      curPos = dest hero.location
+      npcPos = dest state.npc.location
+      heroPos = dest hero.location
       newPos' =  position (Milliseconds 1.0) state.hero
       static = (direction hero.direction) == None
       i' = if static then 0.0 else toNumber state.frameCount
       srcPos = dampen i' $ toCut hero.location hero.direction cuts
       newPos = case isObstacle state newPos' of
-        true -> curPos
+        true -> heroPos
         false -> newPos'
-  pure $ state{ hero{location = Location srcPos newPos,
-                     health = damage (isCollision state newPos') state.hero.health,
-                     animation = updateAnimFrame state.frameCount state.hero.animation}}
+  pure $ state{ hero{ location = Location srcPos newPos,
+                      health = damage (collision' newPos' npcPos) hero.health,
+                      animation = updateAnimFrame state.frameCount hero.animation}}
 
 damage :: Boolean -> Int -> Int
 damage collision health = case collision of

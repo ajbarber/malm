@@ -2,13 +2,16 @@ module Event where
 
 import Prelude
 
-import Data.Array (cons, delete, difference, dropEnd, filter, head, intersect, nub, nubEq)
+import Data.Array (cons, delete, difference, dropEnd, filter, head, intersect, length, nub, nubEq)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Tuple (Tuple(..))
 import Debug (traceM)
 import Effect (Effect)
-import Types (Direction(..), EventType(..))
+import Effect.AVar (AVar)
+import Effect.AVar as EVar
+import Types (Direction(..), EventType(..), AsyncState)
 import Web.Event.Event (Event)
+import Web.Event.EventTarget (EventListener, eventListener)
 import Web.UIEvent.KeyboardEvent (code, key)
 import Web.UIEvent.KeyboardEvent as KBD
 
@@ -32,3 +35,11 @@ keys (Tuple e evType) c = pure case evType of
   KeyUp ->  filter (\n -> n /= fromKeyString k) c
   where
     k = fromMaybe "" $ key <$> KBD.fromEvent e
+
+handleEvent :: EventType -> AVar AsyncState ->  Effect EventListener
+handleEvent evType aVar = eventListener $ \e -> do
+  prev <- EVar.tryTake aVar
+  let prev' = (fromMaybe [] prev)
+  let cur = (cons (Tuple e evType) prev')
+  let cur' = if length cur > 2 then dropEnd 1 cur else cur
+  void $ EVar.tryPut cur' aVar

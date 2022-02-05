@@ -4,26 +4,23 @@ import Prelude
 
 import Control.Monad.Reader (ReaderT, ask, runReaderT)
 import Control.Monad.Reader.Class (class MonadAsk)
-import Data.Array (cons, dropEnd, head, length)
 import Data.DateTime.Instant (unInstant)
 import Data.Foldable (for_)
-import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Time.Duration (negateDuration)
-import Data.Tuple (Tuple(..))
+import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Effect.AVar (AVar)
-import Effect.AVar (tryPut, tryTake, tryRead) as EVar
+import Effect.AVar (tryRead) as EVar
 import Effect.Aff (Aff, launchAff_)
 import Effect.Aff.AVar (new) as AVar
 import Effect.Class (liftEffect)
 import Effect.Now (now)
-import Event (keys)
-import Graphics.Canvas (CanvasImageSource, getCanvasElementById, getContext2D, scale)
+import Event (handleEvent)
+import Graphics.Canvas (CanvasImageSource, getCanvasElementById, getContext2D)
 import Hero as Hero
 import Npc as Npc
 import TileMap (loadedTileMap)
 import Types (AsyncState, Direction(..), EventType(..), LoadedTileMap, State)
-import Web.Event.EventTarget (EventListener, addEventListener, eventListener)
+import Web.Event.EventTarget (addEventListener)
 import Web.HTML (Window, window)
 import Web.HTML.Window (requestAnimationFrame)
 import Web.HTML.Window as Window
@@ -56,6 +53,7 @@ mainEffect aVar hero npc tiles = do
       deltaTime: unInstant t,
       frameCount: 0,
       ctx: ctx,
+      modal: Nothing,
       hero: {
         img: hero,
         direction: [],
@@ -75,32 +73,11 @@ mainEffect aVar hero npc tiles = do
 preload :: forall m. MonadAsk State m => m State
 preload = ask
 
-handleEvent :: EventType -> AVar AsyncState ->  Effect EventListener
-handleEvent evType aVar = eventListener $ \e -> do
-  prev <- EVar.tryTake aVar
-  let prev' = (fromMaybe [] prev)
-  let cur = (cons (Tuple e evType) prev')
-  let cur' = if length cur > 2 then dropEnd 1 cur else cur
-  void $ EVar.tryPut cur' aVar
-
 step :: Window -> AVar AsyncState -> State -> Effect Unit
 step w aVar state = do
-  t <- liftEffect now
   event <- EVar.tryRead aVar
-  dir <- case (head $ fromMaybe [] event) of
-    Just ev -> keys ev state.hero.direction
-    Nothing -> pure state.hero.direction
-  state' <- World.update (stepSt state t dir) >>= Hero.update >>= Npc.update
-  World.draw state'
-  Npc.draw state'
-  Hero.draw state'
+  state' <- World.step event state
   void $ flip requestAnimationFrame w (void $ step w aVar state')
-  where
-    stepSt st time dir = st {
-      deltaTime = unInstant time <> negateDuration (st.deltaTime),
-      frameCount = st.frameCount + 1,
-      hero { direction = dir }
-      }
 
 mainS :: AVar AsyncState -> ReaderT State Effect Unit
 mainS aVar = do

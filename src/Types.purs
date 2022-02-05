@@ -43,9 +43,12 @@ type State = { ctx :: Context2D,
                tileMap :: LoadedTileMap,
                deltaTime :: Milliseconds,
                frameCount :: Int,
+               modal :: Maybe Modal,
                hero :: SpriteState,
                npc :: SpriteState
              }
+
+type Modal = { message :: String }
 
 data EventType = KeyDown | KeyUp
 

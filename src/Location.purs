@@ -7,7 +7,7 @@ import Data.Time.Duration (Milliseconds(..))
 import Data.Tuple (Tuple(..))
 import Event (direction)
 import Math ((%), floor)
-import Types (Coords, Cut, Direction(..), Location(..), Source, SpriteState, State, Vertex(..), dest, slot, toVertices)
+import Types (Coords, Cut, Direction(..), Location(..), Source, SpriteState, State, Vertex(..), dest, slot, source, toVertices)
 
 dampen :: Number -> Location Coords -> Source
 dampen frame location = do
@@ -24,17 +24,11 @@ toCut ::
 toCut loc dir cuts = let src = slot cuts (direction dir) in
   Location src (dest loc)
 
-offset :: Coords -> Coords -> Tuple Number Number
-offset hero world = Tuple trans1 trans2
+offset :: Coords -> Coords -> Coords
+offset hero other = other { xpos=trans1, ypos=trans2 }
   where
-    trans1 = world.xpos  - (floor hero.xoffset)
-    trans2 = world.ypos  - (floor hero.yoffset)
-
-offsetX :: Coords -> Number
-offsetX coords = coords.xpos + coords.xoffset
-
-offsetY :: Coords -> Number
-offsetY coords = coords.ypos + coords.yoffset
+    trans1 = other.xpos  - (floor hero.xoffset)
+    trans2 = other.ypos  - (floor hero.yoffset)
 
 position :: Milliseconds -> SpriteState -> Coords
 position (Milliseconds delta') st = let
@@ -46,38 +40,75 @@ position (Milliseconds delta') st = let
     Down -> coords { yoffset = coords.yoffset + delta' }
     None -> coords
 
-isBlocked :: State -> Coords -> Boolean
-isBlocked st loc = isObstacle st loc || isBoundary st loc
+-- Translates passed sprite coordinates according to where our hero is.
+translate :: State -> Coords -> Coords
+translate state coords = translated { xpos = translated.xpos + translated.xoffset,
+                                      ypos = translated.ypos + translated.yoffset }
+  where
+    translated = offset (dest state.hero.location) coords
+
+translate' :: State -> Coords -> Coords
+translate' state coords = translated { xpos = translated.xpos + translated.xoffset,
+                                       ypos = translated.ypos + translated.yoffset }
+  where
+    translated = offset coords (dest state.hero.location)
+
+-- isBlocked :: State -> Coords -> Boolean
+-- isBlocked st loc = isBlocked' st (translate st loc)
+
+-- isBlocked' :: State -> Coords -> Boolean
+-- isBlocked' st loc = isObstacle' st loc || isBoundary' st loc
 
 isObstacle :: State -> Coords -> Boolean
-isObstacle st loc = any (\x -> collision loc (dest x.location) loc.xoffset loc.yoffset) st.tileMap.walls
+isObstacle st loc = isObstacle' st loc { xpos = loc.xpos + loc.xoffset,
+                                         ypos = loc.ypos + loc.yoffset }
+
+-- isObstacle :: State -> Coords -> Boolean
+-- isObstacle st loc = isObstacle' (st { tileMap { walls = walls' st}}) loc
+--  where
+--    walls' s = map (\w -> w{ location = Location (source w.location) (d' s w)}) s.tileMap.walls
+--    d' s w = translate s $ dest w.location
+
+isObstacle' :: State -> Coords -> Boolean
+isObstacle' st loc = any (\x -> collision loc (dest x.location)) st.tileMap.walls
 
 isCollision :: State -> Coords -> Boolean
-isCollision st loc = let npcLoc = dest st.npc.location in
-  collision2 (toVertices loc) npcLoc 0.0 0.0
+isCollision st loc = isCollision' st $ loc { xpos = loc.xpos + loc.xoffset,
+                                             ypos = loc.ypos + loc.yoffset }
 
-isBoundary :: State -> Coords -> Boolean
-isBoundary st loc =
-  offsetX loc <=  st.tileMap.xMin ||
-  offsetY loc <=  st.tileMap.yMin ||
-  offsetX loc >=  st.tileMap.xMax ||
-  offsetY loc >= st.tileMap.yMax
+isCollision' :: State -> Coords -> Boolean
+isCollision' st loc = let npcLoc = dest (st.npc.location) in
+  collision2 (toVertices loc) npcLoc
+
+collision' :: Coords -> Coords -> Boolean
+collision' loc1 loc2 = collision2 (toVertices (off loc1)) (off loc2)
+  where
+    off l  = l{xpos = l.xpos + l.xoffset,
+               ypos = l.ypos + l.yoffset}
+
+-- isBoundary :: State -> Coords -> Boolean
+-- isBoundary st loc = isBoundary' st loc
+
+-- isBoundary' :: State -> Coords -> Boolean
+-- isBoundary' st loc =
+--   loc.xpos <= st.tileMap.xMin ||
+--   loc.ypos <= st.tileMap.yMin ||
+--   loc.xpos >= st.tileMap.xMax ||
+--   loc.ypos >= st.tileMap.yMax
 
 -- Note that offset is applied to the first location passed
-collision :: Coords -> Coords -> Number -> Number -> Boolean
-collision loc1 loc2 xoff yoff = xCollision && yCollision
+collision :: Coords -> Coords -> Boolean
+collision loc1 loc2  = xCollision && yCollision
    where
-     xCollision = loc1.xpos + xoff + loc1.w > loc2.xpos &&
-                  (loc1.xpos + xoff < loc2.xpos + loc2.w)
-     yCollision = loc1.ypos + yoff + loc1.h > loc2.ypos &&
-                  (loc1.ypos + yoff < loc2.ypos + loc2.h)
+     xCollision = loc1.xpos + loc1.w > loc2.xpos &&
+                  (loc1.xpos < loc2.xpos + loc2.w)
+     yCollision = loc1.ypos + loc1.h > loc2.ypos &&
+                  (loc1.ypos < loc2.ypos + loc2.h)
 
 -- tests if any of the vertices supplied fall within the rectangle defined by
 -- loc xoff yoff
-collision2 :: Array Vertex -> Coords -> Number -> Number -> Boolean
-collision2 vertices loc xoff yoff =
-  let loc' = loc { xpos = loc.xpos - xoff, ypos = loc.ypos - yoff } in
-  any (hasVertex loc') vertices
+collision2 :: Array Vertex -> Coords -> Boolean
+collision2 vertices loc = any (hasVertex loc) vertices
 
 hasVertex :: Coords -> Vertex -> Boolean
 hasVertex { xpos, ypos, w, h} (Vertex x y) =
