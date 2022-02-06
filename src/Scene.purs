@@ -4,6 +4,7 @@ import Prelude
 
 import Data.DateTime.Instant (unInstant)
 import Data.Maybe (Maybe(..))
+import Dead as Dead
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Now (now)
@@ -16,12 +17,12 @@ import World as World
 update :: State -> Effect State
 update state = case state.scene of
   Main -> World.update state
-  Dead seconds -> pure state
+  Dead seconds -> Dead.update state
 
 draw :: State -> Effect Unit
 draw state = case state.scene of
   Main -> World.draw state
-  _ -> pure unit
+  Dead a -> Dead.draw state
 
 init ::
   Context2D ->

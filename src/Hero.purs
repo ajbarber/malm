@@ -13,7 +13,7 @@ import Graphics.Canvas (CanvasImageSource, drawImageFull, strokeRect)
 import Image (loadImg)
 import Location (collision', dampen, isCollision, isObstacle, position, toCut)
 import Record as Record
-import Types (Animation, AnimationType(..), Coords, Cut(..), Direction(..), Location(..), State, dest)
+import Types (Animation, AnimationType(..), Coords, Cut(..), Direction(..), Location(..), Scene(..), State, dest)
 
 file :: String
 file = "assets/character.png"
@@ -56,7 +56,9 @@ update state = do
       newPos = case isObstacle state newPos' of
         true -> heroPos
         false -> newPos'
-  pure $ state{ hero{ location = Location srcPos newPos,
+      scene = if hero.health < 0 then Dead 100 else state.scene
+  pure $ state{ scene = scene,
+                hero{ location = Location srcPos newPos,
                       health = damage (collision' newPos' npcPos) hero.health,
                       animation = updateAnimFrame state.frameCount hero.animation}}
 
