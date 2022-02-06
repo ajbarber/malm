@@ -4,31 +4,21 @@ import Prelude
 
 import Control.Monad.Reader (ReaderT, ask, runReaderT)
 import Control.Monad.Reader.Class (class MonadAsk)
-import Data.Array (head)
-import Data.DateTime.Instant (unInstant)
 import Data.Foldable (for_)
-import Data.Maybe (Maybe(..), fromMaybe)
 import Effect (Effect)
 import Effect.AVar (AVar)
-import Effect.AVar (tryRead) as EVar
 import Effect.Aff (Aff, launchAff_)
 import Effect.Aff.AVar (new) as AVar
 import Effect.Class (liftEffect)
-import Effect.Now (now)
-import Event (handleEvent, hook, keys, marshall) as Event
+import Event (hook, marshall) as Event
 import Graphics.Canvas (CanvasImageSource, getCanvasElementById, getContext2D)
 import Hero as Hero
 import Npc as Npc
 import Scene as Scene
 import TileMap (loadedTileMap)
-import Types (AsyncState, Direction(..), EventType(..), LoadedTileMap, Scene(..), State)
-import Web.Event.Event (Event)
-import Web.Event.EventTarget (addEventListener)
+import Types (AsyncState, LoadedTileMap, State)
 import Web.HTML (Window, window)
 import Web.HTML.Window (requestAnimationFrame)
-import Web.HTML.Window as Window
-import Web.UIEvent.KeyboardEvent.EventTypes (keydown, keyup)
-import World as World
 
 main :: Effect Unit
 main = launchAff_ mainA
@@ -51,28 +41,8 @@ mainEffect aVar hero npc tiles = do
   id <- getCanvasElementById "main"
   for_ id \id' -> do
     ctx <- getContext2D id'
-    t <- liftEffect now
-    runReaderT (mainS aVar) {
-      scene: Main,
-      deltaTime: unInstant t,
-      frameCount: 0,
-      ctx: ctx,
-      hero: {
-        img: hero,
-        direction: [],
-        location: Hero.initLoc,
-        animation: Nothing,
-        health: 100
-        },
-      npc: {
-        img: npc,
-        direction: [ Up ],
-        location: Npc.initLoc,
-        animation: Nothing,
-        health: 100
-      },
-      tileMap: tiles }
-
+    initScene <- Scene.init ctx hero npc tiles
+    runReaderT (mainS aVar) initScene
 preload :: forall m. MonadAsk State m => m State
 preload = ask
 
@@ -91,5 +61,3 @@ mainS aVar = do
     w <- window
     void $ flip requestAnimationFrame w do
       step w aVar ps
-
-    pure unit
