@@ -4,9 +4,10 @@ import Prelude
 
 import Control.Monad.Reader (ReaderT, ask, runReaderT)
 import Control.Monad.Reader.Class (class MonadAsk)
+import Data.Array (head)
 import Data.DateTime.Instant (unInstant)
 import Data.Foldable (for_)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Effect (Effect)
 import Effect.AVar (AVar)
 import Effect.AVar (tryRead) as EVar
@@ -14,12 +15,14 @@ import Effect.Aff (Aff, launchAff_)
 import Effect.Aff.AVar (new) as AVar
 import Effect.Class (liftEffect)
 import Effect.Now (now)
-import Event (handleEvent)
+import Event (handleEvent, hook, keys, marshall) as Event
 import Graphics.Canvas (CanvasImageSource, getCanvasElementById, getContext2D)
 import Hero as Hero
 import Npc as Npc
+import Scene as Scene
 import TileMap (loadedTileMap)
-import Types (AsyncState, Direction(..), EventType(..), LoadedTileMap, State)
+import Types (AsyncState, Direction(..), EventType(..), LoadedTileMap, Scene(..), State)
+import Web.Event.Event (Event)
 import Web.Event.EventTarget (addEventListener)
 import Web.HTML (Window, window)
 import Web.HTML.Window (requestAnimationFrame)
@@ -50,10 +53,10 @@ mainEffect aVar hero npc tiles = do
     ctx <- getContext2D id'
     t <- liftEffect now
     runReaderT (mainS aVar) {
+      scene: Main,
       deltaTime: unInstant t,
       frameCount: 0,
       ctx: ctx,
-      modal: Nothing,
       hero: {
         img: hero,
         direction: [],
@@ -75,23 +78,17 @@ preload = ask
 
 step :: Window -> AVar AsyncState -> State -> Effect Unit
 step w aVar state = do
-  event <- EVar.tryRead aVar
-  state' <- World.step event state
-  void $ flip requestAnimationFrame w (void $ step w aVar state')
+  s <- Event.marshall aVar state
+  s' <- Scene.update s
+  Scene.draw s'
+  void $ flip requestAnimationFrame w (void $ step w aVar s')
 
 mainS :: AVar AsyncState -> ReaderT State Effect Unit
 mainS aVar = do
   ps <- preload
   liftEffect do
+    Event.hook aVar
     w <- window
-
-    keyDownHandler <- handleEvent KeyDown aVar
-    keyUpHandler <- handleEvent KeyUp aVar
-    windowTarget <- map Window.toEventTarget window
-
-    addEventListener keydown keyDownHandler false windowTarget
-    addEventListener keyup keyUpHandler false windowTarget
-
     void $ flip requestAnimationFrame w do
       step w aVar ps
 

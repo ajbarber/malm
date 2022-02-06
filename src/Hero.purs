@@ -62,7 +62,7 @@ update state = do
 
 damage :: Boolean -> Int -> Int
 damage collision health = case collision of
-  true ->  health - 10
+  true ->  health - 1
   false -> health
 
 updateAnimFrame :: Int -> Maybe Animation -> Maybe Animation

@@ -9,11 +9,14 @@ import Debug (traceM)
 import Effect (Effect)
 import Effect.AVar (AVar)
 import Effect.AVar as EVar
-import Types (Direction(..), EventType(..), AsyncState)
+import Types (AsyncState, Direction(..), EventType(..), State)
 import Web.Event.Event (Event)
-import Web.Event.EventTarget (EventListener, eventListener)
+import Web.Event.EventTarget (EventListener, addEventListener, eventListener)
+import Web.HTML (window)
+import Web.HTML.Window as Window
 import Web.UIEvent.KeyboardEvent (code, key)
 import Web.UIEvent.KeyboardEvent as KBD
+import Web.UIEvent.KeyboardEvent.EventTypes (keydown, keyup)
 
 initialCursor :: Array Direction
 initialCursor = [ ]
@@ -43,3 +46,20 @@ handleEvent evType aVar = eventListener $ \e -> do
   let cur = (cons (Tuple e evType) prev')
   let cur' = if length cur > 2 then dropEnd 1 cur else cur
   void $ EVar.tryPut cur' aVar
+
+hook :: AVar AsyncState -> Effect Unit
+hook aVar = do
+  keyDownHandler <- handleEvent KeyDown aVar
+  keyUpHandler <- handleEvent KeyUp aVar
+  windowTarget <- map Window.toEventTarget window
+
+  addEventListener keydown keyDownHandler false windowTarget
+  addEventListener keyup keyUpHandler false windowTarget
+
+marshall :: AVar AsyncState -> State -> Effect State
+marshall aVar state = do
+  event <- EVar.tryRead aVar
+  dir <- case (head $ fromMaybe [] event) of
+    Just ev -> keys ev state.hero.direction
+    Nothing -> pure state.hero.direction
+  pure state { hero { direction = dir } }

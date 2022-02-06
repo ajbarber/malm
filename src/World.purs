@@ -11,24 +11,22 @@ import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Now (now)
 import Event (keys)
+import Graphics.Canvas (fillText, setFont)
 import Hero as Hero
 import Npc as Npc
 import Overworld as Overworld
 import Types (State, AsyncState)
 
-step :: Maybe AsyncState -> State -> Effect State
-step event state = do
+update :: State -> Effect State
+update state = do
   t <- liftEffect now
-  dir <- case (head $ fromMaybe [] event) of
-    Just ev -> keys ev state.hero.direction
-    Nothing -> pure state.hero.direction
-
-  state' <- Overworld.update (stepSt state t dir) >>= Hero.update >>= Npc.update
-  Overworld.draw state' *>  Npc.draw state' *>  Hero.draw state'
+  state' <- Overworld.update (stepSt state t) >>= Hero.update >>= Npc.update
   pure state'
   where
-    stepSt st time dir = st {
+    stepSt st time = st {
       deltaTime = unInstant time <> negateDuration (st.deltaTime),
-      frameCount = st.frameCount + 1,
-      hero { direction = dir }
-      }
+      frameCount = st.frameCount + 1
+    }
+
+draw :: State -> Effect Unit
+draw state = Overworld.draw state *>  Npc.draw state *>  Hero.draw state
