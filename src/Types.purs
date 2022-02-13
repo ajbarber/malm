@@ -17,12 +17,13 @@ data Direction = Left | Right | Down | Up | None
 
 derive instance eqDirection :: Eq Direction
 
+derive instance eqAction :: Eq Action
+
 derive instance genericDirection :: Generic Direction _
 
 instance showDirection :: Show Direction where
   show = genericShow
 
-type DirectionTick = Array Direction
 
 data AnimationType = Damage | Dying
 
@@ -36,8 +37,8 @@ type Animation = {
 type SpriteState = {
   img :: CanvasImageSource,
   location :: Location Coords,
-  direction :: DirectionTick,
-  action :: Action,
+  direction :: Array Direction,
+  action :: Array Action,
   health :: Int,
   animation :: Maybe Animation
 }

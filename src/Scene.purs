@@ -40,7 +40,7 @@ init ctx hero npc tiles = do
     hero: {
       img: hero,
       direction: [],
-      action: Default,
+      action: [Default],
       location: Hero.initLoc,
       animation: Nothing,
       health: 100
@@ -48,7 +48,7 @@ init ctx hero npc tiles = do
     npc: {
       img: npc,
       direction: [ Up ],
-      action: Default,
+      action: [Default],
       location: Npc.initLoc,
       animation: Nothing,
       health: 100
