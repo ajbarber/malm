@@ -35,15 +35,15 @@ load = loadImg file
 cuts :: Cut Coords
 cuts = (flip Record.merge baseOffset) <$> Cut l r u d
   where
-    l = { xpos: 656.0,  ypos: 626.0, w: width, h: height }
-    r = { xpos: 656.0,  ypos: 562.0, w: width, h: height }
-    u = { xpos: 656.0,  ypos: 530.0, w: width, h: height }
-    d = { xpos: 656.0,  ypos: 592.0, w: width, h: height }
+    l = { xpos: 658.0,  ypos: 628.0, w: width, h: height }
+    r = { xpos: 658.0,  ypos: 564.0, w: width, h: height }
+    u = { xpos: 658.0,  ypos: 532.0, w: width, h: height }
+    d = { xpos: 658.0,  ypos: 592.0, w: width, h: height }
 
 initLoc :: Location Coords
 initLoc = (flip Record.merge baseOffset) <$> Location source dest
   where
-    dest = { xpos: 320.0, ypos: 102.0, w: floor width, h: floor height  }
+    dest = { xpos: 320.0, ypos: 102.0, w: width, h: height  }
     source = { xpos: 680.0,  ypos: 592.0, w: width, h: height }
 
 update :: State -> Effect State

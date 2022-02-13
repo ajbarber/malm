@@ -26,6 +26,8 @@ type DirectionTick = Array Direction
 
 data AnimationType = Damage | Dying
 
+data Action = Default | Attacking
+
 type Animation = {
   frames :: Int,
   type_ :: AnimationType
@@ -35,6 +37,7 @@ type SpriteState = {
   img :: CanvasImageSource,
   location :: Location Coords,
   direction :: DirectionTick,
+  action :: Action,
   health :: Int,
   animation :: Maybe Animation
 }

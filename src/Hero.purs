@@ -22,7 +22,7 @@ width :: Number
 width = 16.0
 
 height :: Number
-height = 32.0
+height = 20.0
 
 baseOffset :: { xoffset :: Number, yoffset :: Number }
 baseOffset = { xoffset: 0.0, yoffset: 0.0}
@@ -33,16 +33,16 @@ load = loadImg file
 cuts :: Cut Coords
 cuts = (flip Record.merge baseOffset) <$> Cut l r u d
   where
-    l = { xpos: 0.0,  ypos: 96.0, w: width, h: height }
-    r = { xpos: 0.0,  ypos: 32.0, w: width, h: height }
-    u = { xpos: 0.0,  ypos: 64.0, w: width, h: height }
-    d = { xpos: 0.0,  ypos: 0.0, w: width, h: height }
+    l = { xpos: 0.0,  ypos: 102.0, w: width, h: height }
+    r = { xpos: 0.0,  ypos: 38.0, w: width, h: height }
+    u = { xpos: 0.0,  ypos: 70.0, w: width, h: height }
+    d = { xpos: 0.0,  ypos: 6.0, w: width, h: height }
 
 initLoc :: Location Coords
 initLoc = (flip Record.merge baseOffset) <$> Location source dest
   where
     dest = { xpos: 160.0, ypos: 62.0, w: width, h: height  }
-    source = { xpos: 0.0,  ypos: 0.0, w: width, h: height }
+    source = { xpos: 0.0, ypos: 0.0, w: width, h: height }
 
 update :: State -> Effect State
 update state = do

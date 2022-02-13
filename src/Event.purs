@@ -2,10 +2,10 @@ module Event where
 
 import Prelude
 
-import Data.Array (cons, delete, difference, dropEnd, filter, head, intersect, length, nub, nubEq)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Array (cons, dropEnd, filter, head, length)
+import Data.Foldable (foldl)
+import Data.Maybe (fromMaybe)
 import Data.Tuple (Tuple(..))
-import Debug (traceM)
 import Effect (Effect)
 import Effect.AVar (AVar)
 import Effect.AVar as EVar
@@ -14,7 +14,7 @@ import Web.Event.Event (Event)
 import Web.Event.EventTarget (EventListener, addEventListener, eventListener)
 import Web.HTML (window)
 import Web.HTML.Window as Window
-import Web.UIEvent.KeyboardEvent (code, key)
+import Web.UIEvent.KeyboardEvent (key)
 import Web.UIEvent.KeyboardEvent as KBD
 import Web.UIEvent.KeyboardEvent.EventTypes (keydown, keyup)
 
@@ -32,14 +32,14 @@ fromKeyString str = case str of
   "ArrowDown" -> Down
   _ -> None
 
-keys :: Tuple Event EventType -> Array Direction -> Effect (Array Direction)
-keys (Tuple e evType) c = pure case evType of
+directionKeys :: Tuple Event EventType -> Array Direction -> Array Direction
+directionKeys (Tuple e evType) c = case evType of
   KeyDown -> [ fromKeyString k]
   KeyUp ->  filter (\n -> n /= fromKeyString k) c
   where
     k = fromMaybe "" $ key <$> KBD.fromEvent e
 
-handleEvent :: EventType -> AVar AsyncState ->  Effect EventListener
+handleEvent :: EventType -> AVar AsyncState -> Effect EventListener
 handleEvent evType aVar = eventListener $ \e -> do
   prev <- EVar.tryTake aVar
   let prev' = (fromMaybe [] prev)
@@ -57,9 +57,6 @@ hook aVar = do
   addEventListener keyup keyUpHandler false windowTarget
 
 marshall :: AVar AsyncState -> State -> Effect State
-marshall aVar state = do
-  event <- EVar.tryRead aVar
-  dir <- case (head $ fromMaybe [] event) of
-    Just ev -> keys ev state.hero.direction
-    Nothing -> pure state.hero.direction
-  pure state { hero { direction = dir } }
+marshall aVar state = let d = state.hero.direction in do
+  e <- EVar.tryRead aVar
+  pure $ state { hero { direction = foldl (flip directionKeys) d (e >>= head) } }

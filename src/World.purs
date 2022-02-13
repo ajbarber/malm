@@ -10,7 +10,6 @@ import Data.Time.Duration (negateDuration)
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Now (now)
-import Event (keys)
 import Graphics.Canvas (fillText, setFont)
 import Hero as Hero
 import Npc as Npc
