@@ -15,7 +15,7 @@ import Location (dampen, position, toCut)
 import Location (isObstacle, translate)
 import Math (floor)
 import Record as Record
-import Types (Coords, Cut(..), Direction(..), Location(..), State, dest, reverse)
+import Types (Coords, Cut(..), Direction(..), Location(..), State, dest, key, reverse)
 
 file :: String
 file = "assets/npc/npcs.png"
@@ -51,9 +51,9 @@ update state = do
   let npc = state.npc
       curPos = dest npc.location
       newPos' = position (Milliseconds 1.0) state.npc
-      static = (direction npc.direction) == None
+      static = (key npc.direction) == None
       i' = if static then 0.0 else toNumber state.frameCount
-      srcPos = dampen i' $ toCut npc.location npc.direction cuts
+      srcPos = dampen i' $ toCut npc.location (key npc.direction) cuts
       blocked = isObstacle state newPos'
       newPos = case blocked of
         true -> curPos

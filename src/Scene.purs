@@ -11,7 +11,7 @@ import Effect.Now (now)
 import Graphics.Canvas (CanvasImageSource, Context2D)
 import Hero as Hero
 import Npc as Npc
-import Types (Action(..), Direction(..), LoadedTileMap, Scene(..), State)
+import Types (Action(..), Direction(..), EventType(..), InputEvent(..), LoadedTileMap, Scene(..), State)
 import World as World
 
 update :: State -> Effect State
@@ -39,16 +39,16 @@ init ctx hero npc tiles = do
     ctx: ctx,
     hero: {
       img: hero,
-      direction: [],
-      action: [Default],
+      direction: mempty,
+      action: mempty,
       location: Hero.initLoc,
       animation: Nothing,
       health: 100
       },
     npc: {
       img: npc,
-      direction: [ Up ],
-      action: [Default],
+      direction: InputEvent Up KeyDown,
+      action: mempty,
       location: Npc.initLoc,
       animation: Nothing,
       health: 100

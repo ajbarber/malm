@@ -6,6 +6,7 @@ import Data.Foldable (for_)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
 import Data.Time.Duration (Milliseconds(..))
+import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Event (direction)
@@ -13,7 +14,7 @@ import Graphics.Canvas (CanvasImageSource, drawImageFull, strokeRect)
 import Image (loadImg)
 import Location (collision', dampen, isCollision, isObstacle, position, toCut)
 import Record as Record
-import Types (Animation, AnimationType(..), Coords, Cut(..), Direction(..), Location(..), Scene(..), State, dest)
+import Types (Action(..), Animation, AnimationType(..), Coords, Cut(..), Direction(..), Location(..), Scene(..), Source, State, dest, isAttacking, key)
 
 file :: String
 file = "assets/character.png"
@@ -30,13 +31,21 @@ baseOffset = { xoffset: 0.0, yoffset: 0.0}
 load :: Aff CanvasImageSource
 load = loadImg file
 
-cuts :: Cut Coords
-cuts = (flip Record.merge baseOffset) <$> Cut l r u d
+walkingCuts :: Cut Coords
+walkingCuts = (flip Record.merge baseOffset) <$> Cut l r u d
   where
     l = { xpos: 0.0,  ypos: 102.0, w: width, h: height }
     r = { xpos: 0.0,  ypos: 38.0, w: width, h: height }
     u = { xpos: 0.0,  ypos: 70.0, w: width, h: height }
     d = { xpos: 0.0,  ypos: 6.0, w: width, h: height }
+
+attackCuts :: Cut Coords
+attackCuts = (flip Record.merge baseOffset) <$> Cut l r u d
+  where
+    l = { xpos: 3.0,  ypos: 144.0, w: width, h: height }
+    r = { xpos: 3.0,  ypos: 204.0, w: width, h: height }
+    u = { xpos: 3.0,  ypos: 174.0, w: width, h: height }
+    d = { xpos: 3.0,  ypos: 134.0, w: width, h: height }
 
 initLoc :: Location Coords
 initLoc = (flip Record.merge baseOffset) <$> Location source dest
@@ -44,15 +53,22 @@ initLoc = (flip Record.merge baseOffset) <$> Location source dest
     dest = { xpos: 160.0, ypos: 62.0, w: width, h: height  }
     source = { xpos: 0.0, ypos: 0.0, w: width, h: height }
 
+cut :: State -> Source
+cut state =
+  let hero = state.hero
+      static = (key hero.direction) == None
+      i' = if static then 0.0 else toNumber state.frameCount in
+  case isAttacking hero of
+    true -> dampen i' $ toCut hero.location (key hero.direction) attackCuts
+    false -> dampen i' $ toCut hero.location (key hero.direction) walkingCuts
+
 update :: State -> Effect State
 update state = do
   let hero = state.hero
       npcPos = dest state.npc.location
       heroPos = dest hero.location
       newPos' =  position (Milliseconds 1.0) state.hero
-      static = (direction hero.direction) == None
-      i' = if static then 0.0 else toNumber state.frameCount
-      srcPos = dampen i' $ toCut hero.location hero.direction cuts
+      srcPos = cut state
       newPos = case isObstacle state newPos' of
         true -> heroPos
         false -> newPos'

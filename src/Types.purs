@@ -10,10 +10,23 @@ import Data.Maybe (Maybe)
 import Data.Show.Generic (genericShow)
 import Data.Time.Duration (Milliseconds)
 import Data.Tuple (Tuple)
+import Debug (spy)
 import Graphics.Canvas (CanvasImageSource, Context2D)
 import Web.Event.Event (Event)
 
 data Direction = Left | Right | Down | Up | None
+
+instance monoidDirection :: Monoid Direction where
+  mempty = None
+
+instance semigroupDirection :: Semigroup Direction where
+  append lhs _ = lhs
+
+instance monoidAction :: Monoid Action where
+  mempty = Default
+
+instance semigroupAction :: Semigroup Action where
+  append lhs _ = lhs
 
 derive instance eqDirection :: Eq Direction
 
@@ -23,7 +36,6 @@ derive instance genericDirection :: Generic Direction _
 
 instance showDirection :: Show Direction where
   show = genericShow
-
 
 data AnimationType = Damage | Dying
 
@@ -37,8 +49,8 @@ type Animation = {
 type SpriteState = {
   img :: CanvasImageSource,
   location :: Location Coords,
-  direction :: Array Direction,
-  action :: Array Action,
+  direction :: InputEvent Direction,
+  action :: InputEvent Action,
   health :: Int,
   animation :: Maybe Animation
 }
@@ -59,6 +71,28 @@ data EventType = KeyDown | KeyUp
 derive instance eqEventType :: Eq EventType
 
 type AsyncState =  Array (Tuple Event EventType)
+
+data InputEvent e = InputEvent e EventType
+
+instance inputEventMonoid :: (Eq e, Monoid e) => Monoid (InputEvent e) where
+  mempty = InputEvent mempty KeyUp
+
+instance inputEventSemigroup :: (Eq e, Monoid e) => Semigroup (InputEvent e) where
+  append (InputEvent e1 KeyUp) (InputEvent e2 KeyDown) = if (e1 == e2) then spy "mempty" mempty
+                                                         else spy "keydown" (InputEvent e2 KeyDown)
+  append (InputEvent e1 KeyDown) _ = spy "3" InputEvent e1 KeyDown
+  append (InputEvent e1 KeyUp) (InputEvent _ KeyUp) = InputEvent e1 KeyUp
+
+instance functorInputEvent :: Functor (InputEvent) where
+  map f (InputEvent e snd) = InputEvent (f e) snd
+
+key ::
+  forall e.
+  Monoid e =>
+  InputEvent e ->
+  e
+key (InputEvent e KeyDown) = e
+key (InputEvent _ KeyUp) = mempty
 
 data Vertex = Vertex Number Number
 
@@ -132,3 +166,6 @@ toVertices { xpos, ypos, h, w } = [
   Vertex xpos (ypos + h),
   Vertex (xpos + w) ypos,
   Vertex (xpos + w) (ypos + h) ]
+
+isAttacking :: SpriteState -> Boolean
+isAttacking s = key s.action == Attacking

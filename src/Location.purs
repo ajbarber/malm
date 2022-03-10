@@ -3,11 +3,12 @@ module Location where
 import Prelude
 
 import Data.Array (any)
+import Data.Maybe (Maybe)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Tuple (Tuple(..))
 import Event (direction)
 import Math ((%), floor)
-import Types (Coords, Cut, Direction(..), Location(..), Source, SpriteState, State, Vertex(..), dest, slot, source, toVertices)
+import Types (Coords, Cut, Direction(..), Location(..), Source, SpriteState, State, Vertex(..), dest, key, slot, source, toVertices)
 
 dampen :: Number -> Location Coords -> Source
 dampen frame location = do
@@ -18,10 +19,10 @@ dampen frame location = do
 
 toCut ::
   Location Coords ->
-  Array Direction ->
+  Direction ->
   Cut Coords ->
   Location Coords
-toCut loc dir cuts = let src = slot cuts (direction dir) in
+toCut loc dir cuts = let src = slot cuts dir in
   Location src (dest loc)
 
 offset :: Coords -> Coords -> Coords
@@ -33,7 +34,7 @@ offset hero other = other { xpos=trans1, ypos=trans2 }
 position :: Milliseconds -> SpriteState -> Coords
 position (Milliseconds delta') st = let
   coords = dest st.location in
-  case (direction st.direction) of
+  case (key st.direction) of
     Left -> coords { xoffset = coords.xoffset - delta' }
     Right -> coords { xoffset = coords.xoffset + delta' }
     Up -> coords { yoffset = coords.yoffset - delta' }
