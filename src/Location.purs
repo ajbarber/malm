@@ -6,9 +6,8 @@ import Data.Array (any)
 import Data.Maybe (Maybe)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Tuple (Tuple(..))
-import Event (direction)
 import Math ((%), floor)
-import Types (Coords, Cut, Direction(..), Location(..), Source, SpriteState, State, Vertex(..), dest, key, slot, source, toVertices)
+import Types (Coords, Cut, Direction(..), DirectionTick(..), Location(..), Source, SpriteState, State, Vertex(..), dest, direction, key, slot, source, toVertices)
 
 dampen :: Number -> Location Coords -> Source
 dampen frame location = do
@@ -31,15 +30,15 @@ offset hero other = other { xpos=trans1, ypos=trans2 }
     trans1 = other.xpos  - (floor hero.xoffset)
     trans2 = other.ypos  - (floor hero.yoffset)
 
-position :: Milliseconds -> SpriteState -> Coords
-position (Milliseconds delta') st = let
+position :: SpriteState -> Coords
+position st = let
   coords = dest st.location in
   case (key st.direction) of
-    Left -> coords { xoffset = coords.xoffset - delta' }
-    Right -> coords { xoffset = coords.xoffset + delta' }
-    Up -> coords { yoffset = coords.yoffset - delta' }
-    Down -> coords { yoffset = coords.yoffset + delta' }
-    None -> coords
+    DirectionTick Left f -> coords { xoffset = coords.xoffset - f }
+    DirectionTick Right f -> coords { xoffset = coords.xoffset + f }
+    DirectionTick Up f -> coords { yoffset = coords.yoffset - f }
+    DirectionTick Down f -> coords { yoffset = coords.yoffset + f }
+    DirectionTick None _ -> coords
 
 -- Translates passed sprite coordinates according to where our hero is.
 translate :: State -> Coords -> Coords

@@ -12,9 +12,16 @@ import Data.Time.Duration (Milliseconds)
 import Data.Tuple (Tuple)
 import Debug (spy)
 import Graphics.Canvas (CanvasImageSource, Context2D)
-import Web.Event.Event (Event)
+import Web.Event.Event (Event, EventType(..)) as Web
 
 data Direction = Left | Right | Down | Up | None
+
+data DirectionTick = DirectionTick Direction Number
+
+derive instance genericDirection :: Generic Direction _
+
+instance showDirection :: Show Direction where
+  show = genericShow
 
 instance monoidDirection :: Monoid Direction where
   mempty = None
@@ -32,10 +39,27 @@ derive instance eqDirection :: Eq Direction
 
 derive instance eqAction :: Eq Action
 
-derive instance genericDirection :: Generic Direction _
+derive instance genericDirectionTick :: Generic DirectionTick _
 
-instance showDirection :: Show Direction where
+instance showDirectionTick :: Show DirectionTick where
   show = genericShow
+
+derive instance eqDirectionTick :: Eq DirectionTick
+
+instance directionTickMonoid :: Monoid DirectionTick where
+  mempty = DirectionTick None 0.0
+
+instance directionTickSemigroup :: Semigroup DirectionTick where
+  append lhs _ = lhs
+
+dec :: DirectionTick -> DirectionTick
+dec (DirectionTick d f) = DirectionTick d (f - 1.0)
+
+direction :: DirectionTick -> Direction
+direction (DirectionTick a _) = a
+
+frames :: DirectionTick -> Number
+frames (DirectionTick _ b) = b
 
 data AnimationType = Damage | Dying
 
@@ -49,7 +73,7 @@ type Animation = {
 type SpriteState = {
   img :: CanvasImageSource,
   location :: Location Coords,
-  direction :: InputEvent Direction,
+  direction :: InputEvent DirectionTick,
   action :: InputEvent Action,
   health :: Int,
   animation :: Maybe Animation
@@ -68,20 +92,25 @@ data Scene = Main | Dead Int
 
 data EventType = KeyDown | KeyUp
 
+derive instance genericEventType :: Generic EventType _
+
+instance showEventTyp :: Show EventType where
+  show = genericShow
+
 derive instance eqEventType :: Eq EventType
 
-type AsyncState =  Array (Tuple Event EventType)
+type AsyncState =  Array (Tuple Web.Event EventType)
 
 data InputEvent e = InputEvent e EventType
 
+instance inputEventShow :: (Show e) => Show (InputEvent e)  where
+  show (InputEvent e t) = "Input Event "<> show e <> ":" <> show t
+
 instance inputEventMonoid :: (Eq e, Monoid e) => Monoid (InputEvent e) where
-  mempty = InputEvent mempty KeyUp
+   mempty = InputEvent mempty KeyUp
 
 instance inputEventSemigroup :: (Eq e, Monoid e) => Semigroup (InputEvent e) where
-  append (InputEvent e1 KeyUp) (InputEvent e2 KeyDown) = if (e1 == e2) then spy "mempty" mempty
-                                                         else spy "keydown" (InputEvent e2 KeyDown)
-  append (InputEvent e1 KeyDown) _ = spy "3" InputEvent e1 KeyDown
-  append (InputEvent e1 KeyUp) (InputEvent _ KeyUp) = InputEvent e1 KeyUp
+  append lhs _ = lhs
 
 instance functorInputEvent :: Functor (InputEvent) where
   map f (InputEvent e snd) = InputEvent (f e) snd

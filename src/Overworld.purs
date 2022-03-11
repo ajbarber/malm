@@ -5,11 +5,11 @@ import Prelude
 import Data.Array (filter)
 import Data.Foldable (for_, traverse_)
 import Data.Tuple (Tuple(..))
+import Drawing as D
 import Effect (Effect)
 import Graphics.Canvas (fillRect, fillText, setFillStyle, setFont, setTransform)
-import Drawing as D
 import Location (offset)
-import Types (State, Vertex(..), dest, toVertices)
+import Types (State, Vertex(..), dest, key, toVertices)
 
 update :: State -> Effect State
 update gs = pure gs
@@ -36,4 +36,5 @@ text state = do
   setFont state.ctx "8px pixel"
   --scale state.ctx { scaleX : 3.0, scaleY: 3.0 }
   traverse_ (\(Vertex x y) -> fillText state.ctx ("x:" <> show x <> "/" <> "y:" <> show y) x y) (toVertices (dest state.npc.location))
+  fillText state.ctx (show $ key state.hero.direction)  100.0 8.0
   fillText state.ctx (show state.hero.health) 260.0 8.0

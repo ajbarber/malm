@@ -6,15 +6,15 @@ import Data.Foldable (for_)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
 import Data.Time.Duration (Milliseconds(..))
+import Data.Tuple (fst)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (Aff)
-import Event (direction)
 import Graphics.Canvas (CanvasImageSource, drawImageFull, strokeRect)
 import Image (loadImg)
 import Location (collision', dampen, isCollision, isObstacle, position, toCut)
 import Record as Record
-import Types (Action(..), Animation, AnimationType(..), Coords, Cut(..), Direction(..), Location(..), Scene(..), Source, State, dest, isAttacking, key)
+import Types (Action(..), Animation, AnimationType(..), Coords, Cut(..), Direction(..), Location(..), Scene(..), Source, State, dest, direction, isAttacking, key, dec)
 
 file :: String
 file = "assets/character.png"
@@ -56,18 +56,18 @@ initLoc = (flip Record.merge baseOffset) <$> Location source dest
 cut :: State -> Source
 cut state =
   let hero = state.hero
-      static = (key hero.direction) == None
+      static = direction (key hero.direction) == None
       i' = if static then 0.0 else toNumber state.frameCount in
   case isAttacking hero of
-    true -> dampen i' $ toCut hero.location (key hero.direction) attackCuts
-    false -> dampen i' $ toCut hero.location (key hero.direction) walkingCuts
+    true -> dampen i' $ toCut hero.location (direction $ key hero.direction) attackCuts
+    false -> dampen i' $ toCut hero.location (direction $ key hero.direction) walkingCuts
 
 update :: State -> Effect State
 update state = do
   let hero = state.hero
       npcPos = dest state.npc.location
       heroPos = dest hero.location
-      newPos' =  position (Milliseconds 1.0) state.hero
+      newPos' =  position state.hero
       srcPos = cut state
       newPos = case isObstacle state newPos' of
         true -> heroPos

@@ -8,14 +8,13 @@ import Data.Time.Duration (Milliseconds(..))
 import Drawing as D
 import Effect (Effect)
 import Effect.Aff (Aff)
-import Event (direction)
 import Graphics.Canvas (CanvasImageSource, strokeRect)
 import Image (loadImg)
 import Location (dampen, position, toCut)
 import Location (isObstacle, translate)
 import Math (floor)
 import Record as Record
-import Types (Coords, Cut(..), Direction(..), Location(..), State, dest, key, reverse)
+import Types (Coords, Cut(..), Direction(..), DirectionTick(..), Location(..), State, dest, direction, frames, key, reverse)
 
 file :: String
 file = "assets/npc/npcs.png"
@@ -50,17 +49,17 @@ update :: State -> Effect State
 update state = do
   let npc = state.npc
       curPos = dest npc.location
-      newPos' = position (Milliseconds 1.0) state.npc
-      static = (key npc.direction) == None
+      newPos' = position state.npc
+      static = direction (key npc.direction) == None
       i' = if static then 0.0 else toNumber state.frameCount
-      srcPos = dampen i' $ toCut npc.location (key npc.direction) cuts
+      srcPos = dampen i' $ toCut npc.location (direction $ key npc.direction) cuts
       blocked = isObstacle state newPos'
       newPos = case blocked of
         true -> curPos
         false -> newPos'
   pure $ state{ npc{location = Location srcPos newPos,
                     direction = if blocked then
-                                  reverse <$> npc.direction
+                                  (\x -> DirectionTick (reverse $ direction x) (frames x)) <$> npc.direction
                                 else
                                   npc.direction }}
 

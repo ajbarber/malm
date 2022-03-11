@@ -10,7 +10,7 @@ import Effect (Effect)
 import Effect.AVar (AVar)
 import Effect.AVar as EVar
 import Effect.Class.Console (logShow)
-import Types (Action(..), AsyncState, Direction(..), EventType(..), InputEvent(..), State, key)
+import Types (Action(..), AsyncState, Direction(..), DirectionTick(..), EventType(..), InputEvent(..), State, key)
 import Web.Event.Event (Event)
 import Web.Event.EventTarget (EventListener, addEventListener, eventListener)
 import Web.HTML (window)
@@ -18,19 +18,15 @@ import Web.HTML.Window as Window
 import Web.UIEvent.KeyboardEvent as KBD
 import Web.UIEvent.KeyboardEvent.EventTypes (keydown, keyup)
 
-initialCursor :: Array Direction
-initialCursor = [ ]
 
-direction :: Array (Maybe Direction) -> Direction
-direction k = fromMaybe None (join $ head k)
-
-dirDecoder :: String -> Direction
-dirDecoder str = case str of
-  "ArrowLeft" -> Left
-  "ArrowRight" -> Right
-  "ArrowUp" -> Up
-  "ArrowDown" -> Down
-  _ -> None
+dirDecoder :: String -> DirectionTick
+dirDecoder str = DirectionTick (dir str) 1.0 where
+  dir s = case s of
+    "ArrowLeft" -> Left
+    "ArrowRight" -> Right
+    "ArrowUp" -> Up
+    "ArrowDown" -> Down
+    _ -> None
 
 actionDecoder :: String -> Action
 actionDecoder str = case str of
@@ -78,5 +74,5 @@ tick decoder e = fromMaybe mempty $ (keys decoder) <$> (e >>=head)
 marshall :: AVar AsyncState -> State -> Effect State
 marshall aVar state = let h = state.hero in do
   e <- EVar.tryRead aVar
-  pure $ state { hero { direction = (tick dirDecoder e) <> h.direction,
-                        action = (tick actionDecoder e) <> h.action} }
+  pure $ state { hero { direction = tick dirDecoder e <> h.direction,
+                        action = tick actionDecoder e <> h.action } }
