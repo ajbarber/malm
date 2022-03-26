@@ -61,8 +61,8 @@ cut state =
       c = toCut hero.location (direction $ key hero.direction)
   in
   case isAttacking hero of
-    true -> dampen (Just 31.0) (Just 13.0) i $ c (attackCuts 16.0 20.0)
-    false -> dampen Nothing Nothing i' $ c walkingCuts
+    true -> dampen (Just 31.0) (Just 13.0) i (c $ attackCuts 16.0 20.0) 4.0
+    false -> dampen Nothing Nothing i' (c walkingCuts) 4.0
 
 update :: State -> Effect State
 update state = do

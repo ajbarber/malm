@@ -51,7 +51,7 @@ update state = do
       static = direction (key npc.direction) == None
       i' = if static then 0.0 else toNumber state.frameCount
       cut = toCut npc.location (direction $ key npc.direction) (cuts npc)
-      srcPos = dampen Nothing Nothing i' cut
+      srcPos = dampen Nothing Nothing i' cut 2.0
       blocked = isObstacle state newPos'
       newPos = case blocked of
         true -> curPos

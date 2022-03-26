@@ -14,9 +14,10 @@ dampen ::
   Maybe Number ->
   Number ->
   Location Coords ->
+  Number ->
   Source
-dampen width factor frame location = do
-  src { xpos = src.xpos + (dampF frame) % 4.0 * (fromMaybe src.w width) }
+dampen width factor frame location ncuts = do
+  src { xpos = src.xpos + (dampF frame) % ncuts * (fromMaybe src.w width) }
   where
     dampF x = x - x % (fromMaybe 9.0 factor)
     Location src dst = location
