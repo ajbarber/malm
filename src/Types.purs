@@ -77,6 +77,8 @@ type SpriteState = {
   direction :: InputEvent DirectionTick,
   action :: InputEvent Action,
   health :: Int,
+  width :: Number,
+  height :: Number,
   animation :: Maybe Animation
 }
 
@@ -135,7 +137,7 @@ type ICoords a = { w :: Number,
                    xpos :: Number,
                    ypos :: Number | a }
 
-type Offset = (xoffset :: Number, yoffset :: Number)
+type Offset = (xoffset :: Number, yoffset :: Number, perimeter :: Number)
 
 type InputCoordMap = { src :: CoordsIn, dest :: CoordsIn, wall :: Boolean }
 

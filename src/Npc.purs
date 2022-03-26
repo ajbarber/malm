@@ -12,36 +12,36 @@ import Image (loadImg)
 import Location (dampen, position, toCut)
 import Location (isObstacle, translate)
 import Record as Record
-import Types (Coords, Cut(..), Direction(..), DirectionTick(..), Location(..), State, dest, direction, speed, key, reverse)
+import Types (Coords, Cut(..), Direction(..), DirectionTick(..), Location(..), State, SpriteState, dest, direction, key, reverse, speed)
 
 file :: String
 file = "assets/npc/npcs.png"
 
-width :: Number
-width = 24.0
+baseOffset :: { xoffset :: Number, yoffset :: Number, perimeter :: Number }
+baseOffset = { xoffset: 0.0, yoffset: 0.0, perimeter: 0.0 }
 
-height :: Number
-height = 28.0
+defaultWidth :: Number
+defaultWidth = 24.0
 
-baseOffset :: { xoffset :: Number, yoffset :: Number }
-baseOffset = { xoffset: 0.0, yoffset: 0.0}
+defaultHeight :: Number
+defaultHeight = 28.0
 
 load :: Aff CanvasImageSource
 load = loadImg file
 
-cuts :: Cut Coords
-cuts = (flip Record.merge baseOffset) <$> Cut l r u d
+cuts :: SpriteState -> Cut Coords
+cuts ss = (flip Record.merge baseOffset) <$> Cut l r u d
   where
-    l = { xpos: 658.0,  ypos: 628.0, w: width, h: height }
-    r = { xpos: 658.0,  ypos: 564.0, w: width, h: height }
-    u = { xpos: 658.0,  ypos: 532.0, w: width, h: height }
-    d = { xpos: 658.0,  ypos: 592.0, w: width, h: height }
+    l = { xpos: 658.0,  ypos: 628.0, w: ss.width, h: ss.height }
+    r = { xpos: 658.0,  ypos: 564.0, w: ss.width, h: ss.height }
+    u = { xpos: 658.0,  ypos: 532.0, w: ss.width, h: ss.height }
+    d = { xpos: 658.0,  ypos: 592.0, w: ss.width, h: ss.height }
 
 initLoc :: Location Coords
 initLoc = (flip Record.merge baseOffset) <$> Location source dest
   where
-    dest = { xpos: 320.0, ypos: 102.0, w: width, h: height  }
-    source = { xpos: 680.0,  ypos: 592.0, w: width, h: height }
+    dest = { xpos: 320.0, ypos: 102.0, w: defaultWidth, h: defaultHeight  }
+    source = { xpos: 680.0,  ypos: 592.0, w: defaultWidth, h: defaultHeight }
 
 update :: State -> Effect State
 update state = do
@@ -50,7 +50,7 @@ update state = do
       newPos' = position state.npc
       static = direction (key npc.direction) == None
       i' = if static then 0.0 else toNumber state.frameCount
-      cut = toCut npc.location (direction $ key npc.direction) cuts
+      cut = toCut npc.location (direction $ key npc.direction) (cuts npc)
       srcPos = dampen Nothing Nothing i' cut
       blocked = isObstacle state newPos'
       newPos = case blocked of

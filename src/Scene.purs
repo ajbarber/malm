@@ -43,7 +43,9 @@ init ctx hero npc tiles = do
       action: mempty,
       location: Hero.initLoc,
       animation: Nothing,
-      health: 100
+      health: 100,
+      width: 16.0,
+      height: 20.0
       },
     npc: {
       img: npc,
@@ -51,6 +53,8 @@ init ctx hero npc tiles = do
       action: mempty,
       location: Npc.initLoc,
       animation: Nothing,
-      health: 100
+      health: 100,
+      width: 24.0,
+      height: 28.0
       },
     tileMap: tiles }

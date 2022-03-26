@@ -16,7 +16,7 @@ dampen ::
   Location Coords ->
   Source
 dampen width factor frame location = do
-  src { xpos = src.xpos + (dampF frame) % 2.0 * (fromMaybe src.w width) }
+  src { xpos = src.xpos + (dampF frame) % 4.0 * (fromMaybe src.w width) }
   where
     dampF x = x - x % (fromMaybe 9.0 factor)
     Location src dst = location

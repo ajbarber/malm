@@ -22,9 +22,9 @@ loadedTileMap = do
   arr <- loadedTiles
   pure { tiles: arr,
          xMin: 0.0,
-         yMin: -Hero.height/2.0,
-         xMax: xMax tileData + Hero.width,
-         yMax: yMax tileData - Hero.height/2.0,
+         yMin: -Hero.defaultHeight/2.0,
+         xMax: xMax tileData + Hero.defaultWidth,
+         yMax: yMax tileData - Hero.defaultHeight/2.0,
          walls: filter _.wall arr
        }
 

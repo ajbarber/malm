@@ -5,28 +5,25 @@ import Prelude
 import Data.Foldable (for_)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
-import Data.Time.Duration (Milliseconds(..))
-import Data.Tuple (fst)
-import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Graphics.Canvas (CanvasImageSource, drawImageFull, strokeRect)
 import Image (loadImg)
-import Location (collision', dampen, isCollision, isObstacle, position, toCut)
+import Location (collision', dampen, isObstacle, position, toCut)
 import Record as Record
-import Types (Action(..), Animation, AnimationType(..), Coords, Cut(..), Direction(..), Location(..), Scene(..), Source, State, SpriteState, dec, dest, direction, isAttacking, key, speed)
+import Types (Animation, AnimationType(..), Coords, Cut(..), Location(..), Scene(..), Source, SpriteState, State, dest, direction, isAttacking, key, speed)
 
 file :: String
 file = "assets/character.png"
 
-width :: Number
-width = 16.0
+baseOffset :: { xoffset :: Number, yoffset :: Number, perimeter :: Number }
+baseOffset = { xoffset: 0.0, yoffset: 0.0, perimeter: 4.0}
 
-height :: Number
-height = 20.0
+defaultWidth :: Number
+defaultWidth = 16.0
 
-baseOffset :: { xoffset :: Number, yoffset :: Number }
-baseOffset = { xoffset: 0.0, yoffset: 0.0}
+defaultHeight :: Number
+defaultHeight = 20.0
 
 load :: Aff CanvasImageSource
 load = loadImg file
@@ -34,24 +31,24 @@ load = loadImg file
 walkingCuts :: Cut Coords
 walkingCuts = (flip Record.merge baseOffset) <$> Cut l r u d
   where
-    l = { xpos: 0.0,  ypos: 102.0, w: width, h: height }
-    r = { xpos: 0.0,  ypos: 38.0, w: width, h: height }
-    u = { xpos: 0.0,  ypos: 70.0, w: width, h: height }
-    d = { xpos: 0.0,  ypos: 6.0, w: width, h: height }
+    l = { xpos: 0.0,  ypos: 102.0, w: defaultWidth , h: defaultHeight }
+    r = { xpos: 0.0,  ypos: 38.0, w: defaultWidth, h: defaultHeight }
+    u = { xpos: 0.0,  ypos: 70.0, w: defaultWidth, h: defaultHeight }
+    d = { xpos: 0.0,  ypos: 6.0, w: defaultWidth, h: defaultHeight }
 
-attackCuts :: Cut Coords
-attackCuts = (flip Record.merge baseOffset) <$> Cut l r u d
+attackCuts :: Number -> Number -> Cut Coords
+attackCuts w h  = (flip Record.merge baseOffset) <$> Cut l r u d
   where
-    l = { xpos: 8.0,  ypos: 230.0, w: width, h: height }
-    r = { xpos: 8.0,  ypos: 198.0, w: width, h: height }
-    u = { xpos: 8.0,  ypos: 165.0, w: width, h: height }
-    d = { xpos: 8.0,  ypos: 133.0, w: width, h: height }
+    l = { xpos: 4.0,  ypos: 230.0, w: w, h: h }
+    r = { xpos: 4.0,  ypos: 198.0, w: w, h: h }
+    u = { xpos: 4.0,  ypos: 167.0, w: w, h: h }
+    d = { xpos: 4.0,  ypos: 135.0, w: w, h: h }
 
 initLoc :: Location Coords
 initLoc = (flip Record.merge baseOffset) <$> Location source dest
   where
-    dest = { xpos: 160.0, ypos: 62.0, w: width, h: height  }
-    source = { xpos: 0.0, ypos: 0.0, w: width, h: height }
+    dest = { xpos: 160.0, ypos: 62.0, w: defaultWidth, h: defaultHeight }
+    source = { xpos: 0.0, ypos: 0.0, w: defaultWidth, h: defaultHeight }
 
 static :: SpriteState -> Boolean
 static ss = (speed <<< key $ ss.direction) == 0.0
@@ -59,11 +56,12 @@ static ss = (speed <<< key $ ss.direction) == 0.0
 cut :: State -> Source
 cut state =
   let hero = state.hero
-      i' = if static hero then 0.0 else toNumber state.frameCount
+      i = toNumber state.frameCount
+      i' = if static hero then 0.0 else i
       c = toCut hero.location (direction $ key hero.direction)
   in
   case isAttacking hero of
-    true -> dampen (Just 31.0) (Just 19.0) i' $ c attackCuts
+    true -> dampen (Just 31.0) (Just 13.0) i $ c (attackCuts 16.0 20.0)
     false -> dampen Nothing Nothing i' $ c walkingCuts
 
 update :: State -> Effect State
@@ -78,9 +76,11 @@ update state = do
         false -> newPos'
       scene = if hero.health < 0 then Dead 100 else state.scene
   pure $ state{ scene = scene,
-                hero{ location = Location srcPos newPos,
+                hero{ location = Location srcPos { perimeter = inflate hero } newPos,
                       health = damage (collision' newPos' npcPos) hero.health,
                       animation = updateAnimFrame state.frameCount hero.animation}}
+  where
+     inflate hero = if isAttacking hero then 4.0 else 0.0
 
 damage :: Boolean -> Int -> Int
 damage collision health = case collision of
@@ -103,21 +103,22 @@ draw state = do
   for_ state.hero.animation drawAnimation
 
 drawChar :: State -> Effect Unit
-drawChar state = do
+drawChar state = let
+  Location srcPos newPos = state.hero.location
+  fullPerimeter = 2.0 * srcPos.perimeter in do
   strokeRect state.ctx $ {
     x: newPos.xpos, y: newPos.ypos,
-    width: newPos.w, height: newPos.h }
+    width: newPos.w + 2.0 * srcPos.perimeter, height: newPos.h }
 
   drawImageFull state.ctx state.hero.img
     srcPos.xpos
     srcPos.ypos
-    srcPos.w
-    srcPos.h
-    newPos.xpos
+    (srcPos.w + fullPerimeter)
+    (srcPos.h + fullPerimeter)
+    (newPos.xpos + if srcPos.perimeter > 0.0 then 0.0 else baseOffset.perimeter)
     newPos.ypos
-    newPos.w
-    newPos.h
-  where Location srcPos newPos = state.hero.location
+    (newPos.w + fullPerimeter)
+    (newPos.h + fullPerimeter)
 
 drawAnimation :: Animation -> Effect Unit
 drawAnimation anim = case anim.type_ of
