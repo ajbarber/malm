@@ -27,7 +27,8 @@ instance monoidDirection :: Monoid Direction where
   mempty = None
 
 instance semigroupDirection :: Semigroup Direction where
-  append lhs _ = lhs
+  append None r = r
+  append l _ = l
 
 instance monoidAction :: Monoid Action where
   mempty = Default
@@ -50,7 +51,7 @@ instance directionTickMonoid :: Monoid DirectionTick where
   mempty = DirectionTick None 0.0
 
 instance directionTickSemigroup :: Semigroup DirectionTick where
-  append lhs _ = lhs
+  append (DirectionTick d1 i1) (DirectionTick d2 _) = DirectionTick (d1 <> d2) i1
 
 dec :: DirectionTick -> DirectionTick
 dec (DirectionTick d f) = DirectionTick d (f - 1.0)
@@ -58,8 +59,8 @@ dec (DirectionTick d f) = DirectionTick d (f - 1.0)
 direction :: DirectionTick -> Direction
 direction (DirectionTick a _) = a
 
-frames :: DirectionTick -> Number
-frames (DirectionTick _ b) = b
+speed :: DirectionTick -> Number
+speed (DirectionTick _ b) = b
 
 data AnimationType = Damage | Dying
 
@@ -99,29 +100,29 @@ instance showEventTyp :: Show EventType where
 
 derive instance eqEventType :: Eq EventType
 
-type AsyncState =  Array (Tuple Web.Event EventType)
+type AsyncState =  Array (Tuple String EventType)
 
-data InputEvent e = InputEvent e EventType
+data InputEvent e = InputEvent e
 
 instance inputEventShow :: (Show e) => Show (InputEvent e)  where
-  show (InputEvent e t) = "Input Event "<> show e <> ":" <> show t
+  show (InputEvent e) = "Input Event "<> show e
+
+derive instance inputEvent :: (Eq e) => Eq (InputEvent e)
 
 instance inputEventMonoid :: (Eq e, Monoid e) => Monoid (InputEvent e) where
-   mempty = InputEvent mempty KeyUp
+   mempty = InputEvent mempty
 
 instance inputEventSemigroup :: (Eq e, Monoid e) => Semigroup (InputEvent e) where
-  append lhs _ = lhs
+  append (InputEvent e1) (InputEvent e2) = InputEvent (e1 <> e2)
 
 instance functorInputEvent :: Functor (InputEvent) where
-  map f (InputEvent e snd) = InputEvent (f e) snd
+  map f (InputEvent e) = InputEvent (f e)
 
 key ::
   forall e.
-  Monoid e =>
   InputEvent e ->
   e
-key (InputEvent e KeyDown) = e
-key (InputEvent _ KeyUp) = mempty
+key (InputEvent e) = e
 
 data Vertex = Vertex Number Number
 

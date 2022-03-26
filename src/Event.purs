@@ -2,15 +2,17 @@ module Event where
 
 import Prelude
 
-import Data.Array (cons, dropEnd, head, length)
-import Data.Maybe (Maybe, fromMaybe)
-import Data.Tuple (Tuple(..))
-import Debug (traceM)
+import Data.Array (cons, filter, head, null)
+import Data.Foldable (for_, or)
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Tuple (Tuple(..), fst)
 import Effect (Effect)
 import Effect.AVar (AVar)
 import Effect.AVar as EVar
-import Effect.Class.Console (logShow)
-import Types (Action(..), AsyncState, Direction(..), DirectionTick(..), EventType(..), InputEvent(..), State, key)
+import Effect.Ref (Ref)
+import Effect.Ref (read, write) as Ref
+import Effect.Timer (TimeoutId, clearTimeout, setTimeout)
+import Types (Action(..), AsyncState, Direction(..), DirectionTick(..), EventType(..), InputEvent(..), State)
 import Web.Event.Event (Event)
 import Web.Event.EventTarget (EventListener, addEventListener, eventListener)
 import Web.HTML (window)
@@ -18,48 +20,56 @@ import Web.HTML.Window as Window
 import Web.UIEvent.KeyboardEvent as KBD
 import Web.UIEvent.KeyboardEvent.EventTypes (keydown, keyup)
 
-
 dirDecoder :: String -> DirectionTick
-dirDecoder str = DirectionTick (dir str) 1.0 where
+dirDecoder str = dir str where
   dir s = case s of
-    "ArrowLeft" -> Left
-    "ArrowRight" -> Right
-    "ArrowUp" -> Up
-    "ArrowDown" -> Down
-    _ -> None
+    "ArrowLeft" -> DirectionTick Left 1.0
+    "ArrowRight" -> DirectionTick Right 1.0
+    "ArrowUp" -> DirectionTick Up 1.0
+    "ArrowDown" -> DirectionTick Down 1.0
+    _ -> DirectionTick None 0.0
 
 actionDecoder :: String -> Action
 actionDecoder str = case str of
   "a" -> Attacking
   _ -> Default
 
-keys ::
-  forall m.
-  Monoid m =>
-  (String -> m) ->
-  Tuple Event EventType ->
-  InputEvent m
-keys decoder (Tuple e evType) = InputEvent (decoder k) evType
-  where
-    k = fromMaybe "" $ KBD.key <$> KBD.fromEvent e
+eventToString :: Event -> String
+eventToString e = fromMaybe "" $ KBD.key <$> KBD.fromEvent e
 
-handleEvent :: EventType -> AVar AsyncState -> Effect EventListener
-handleEvent evType aVar = eventListener $ \e -> do
+handleEvent ::
+  EventType ->
+  Array String ->
+  AVar AsyncState ->
+  Effect EventListener
+handleEvent evType evKeys aVar = eventListener do
+    \e -> for_ (filtered e) do \n -> handleEventInner evType aVar n
+  where
+    filtered e = if matching e || null evKeys then Just e else Nothing
+    matching e = or $ map (\x -> eventToString e == x) evKeys
+
+handleEventInner ::
+  EventType ->
+  AVar AsyncState ->
+  Event ->
+  Effect Unit
+handleEventInner evType aVar e = do
   prev <- EVar.tryTake aVar
-  traceM e
-  let prev' = (fromMaybe [] prev)
-  let cur = (cons (Tuple e evType) prev')
-  let cur' = if length cur > 2 then dropEnd 1 cur else cur
+  let prev' = fromMaybe [] prev
+  let cur' = case evType of
+        KeyUp -> filter (\n -> n /= Tuple (eventToString e) KeyDown) prev'
+        KeyDown -> cons (Tuple (eventToString e) KeyDown) prev'
   void $ EVar.tryPut cur' aVar
 
 hook :: AVar AsyncState ->
         Effect Unit
 hook aVar = do
-  keyDownHandler <- handleEvent KeyDown aVar
-  keyUpHandler <- handleEvent KeyUp aVar
+  keyDownAttackHandler <- handleEvent KeyDown ["a"] aVar
+  keyDownControlsHandler <- handleEvent KeyDown ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"] aVar
+  keyUpHandler <- handleEvent KeyUp [] aVar
   windowTarget <- map Window.toEventTarget window
-
-  addEventListener keydown keyDownHandler false windowTarget
+  addEventListener keydown keyDownAttackHandler false windowTarget
+  addEventListener keydown keyDownControlsHandler false windowTarget
   addEventListener keyup keyUpHandler false windowTarget
 
 tick ::
@@ -69,10 +79,32 @@ tick ::
   (String -> m) ->
   Maybe AsyncState ->
   InputEvent m
-tick decoder e = fromMaybe mempty $ (keys decoder) <$> (e >>=head)
+tick decoder e = fromMaybe mempty $ (InputEvent <<< decoder <<< fst) <$> (e >>= head)
 
 marshall :: AVar AsyncState -> State -> Effect State
 marshall aVar state = let h = state.hero in do
   e <- EVar.tryRead aVar
-  pure $ state { hero { direction = tick dirDecoder e <> h.direction,
+  pure $ state { hero {
+                        direction = tick dirDecoder e <> h.direction,
                         action = tick actionDecoder e <> h.action } }
+
+debounceInner ::
+  forall a.
+  Int ->
+  Ref (Maybe TimeoutId) ->
+  (a -> Effect Unit) ->
+  a ->
+  Effect Unit
+debounceInner time ref callback a = do
+  id <- Ref.read ref
+  case id of
+    Nothing -> schedule callback time ref a
+    Just tid -> do
+      clearTimeout tid
+      schedule callback time ref a
+  where
+    schedule cb t r v = do
+      tid <- setTimeout time do
+        callback v
+        Ref.write Nothing ref
+      Ref.write (Just tid) ref

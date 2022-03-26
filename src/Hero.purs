@@ -14,7 +14,7 @@ import Graphics.Canvas (CanvasImageSource, drawImageFull, strokeRect)
 import Image (loadImg)
 import Location (collision', dampen, isCollision, isObstacle, position, toCut)
 import Record as Record
-import Types (Action(..), Animation, AnimationType(..), Coords, Cut(..), Direction(..), Location(..), Scene(..), Source, State, dest, direction, isAttacking, key, dec)
+import Types (Action(..), Animation, AnimationType(..), Coords, Cut(..), Direction(..), Location(..), Scene(..), Source, State, SpriteState, dec, dest, direction, isAttacking, key, speed)
 
 file :: String
 file = "assets/character.png"
@@ -42,10 +42,10 @@ walkingCuts = (flip Record.merge baseOffset) <$> Cut l r u d
 attackCuts :: Cut Coords
 attackCuts = (flip Record.merge baseOffset) <$> Cut l r u d
   where
-    l = { xpos: 3.0,  ypos: 144.0, w: width, h: height }
-    r = { xpos: 3.0,  ypos: 204.0, w: width, h: height }
-    u = { xpos: 3.0,  ypos: 174.0, w: width, h: height }
-    d = { xpos: 3.0,  ypos: 134.0, w: width, h: height }
+    l = { xpos: 8.0,  ypos: 230.0, w: width, h: height }
+    r = { xpos: 8.0,  ypos: 198.0, w: width, h: height }
+    u = { xpos: 8.0,  ypos: 165.0, w: width, h: height }
+    d = { xpos: 8.0,  ypos: 133.0, w: width, h: height }
 
 initLoc :: Location Coords
 initLoc = (flip Record.merge baseOffset) <$> Location source dest
@@ -53,23 +53,27 @@ initLoc = (flip Record.merge baseOffset) <$> Location source dest
     dest = { xpos: 160.0, ypos: 62.0, w: width, h: height  }
     source = { xpos: 0.0, ypos: 0.0, w: width, h: height }
 
+static :: SpriteState -> Boolean
+static ss = (speed <<< key $ ss.direction) == 0.0
+
 cut :: State -> Source
 cut state =
   let hero = state.hero
-      static = direction (key hero.direction) == None
-      i' = if static then 0.0 else toNumber state.frameCount in
+      i' = if static hero then 0.0 else toNumber state.frameCount
+      c = toCut hero.location (direction $ key hero.direction)
+  in
   case isAttacking hero of
-    true -> dampen i' $ toCut hero.location (direction $ key hero.direction) attackCuts
-    false -> dampen i' $ toCut hero.location (direction $ key hero.direction) walkingCuts
+    true -> dampen (Just 31.0) (Just 19.0) i' $ c attackCuts
+    false -> dampen Nothing Nothing i' $ c walkingCuts
 
 update :: State -> Effect State
 update state = do
   let hero = state.hero
       npcPos = dest state.npc.location
       heroPos = dest hero.location
-      newPos' =  position state.hero
+      newPos' =  position hero
       srcPos = cut state
-      newPos = case isObstacle state newPos' of
+      newPos = case (isObstacle state newPos' || static hero) of
         true -> heroPos
         false -> newPos'
       scene = if hero.health < 0 then Dead 100 else state.scene
@@ -102,7 +106,7 @@ drawChar :: State -> Effect Unit
 drawChar state = do
   strokeRect state.ctx $ {
     x: newPos.xpos, y: newPos.ypos,
-    width: newPos.w, height:  newPos.h }
+    width: newPos.w, height: newPos.h }
 
   drawImageFull state.ctx state.hero.img
     srcPos.xpos

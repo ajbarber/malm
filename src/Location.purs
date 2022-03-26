@@ -3,17 +3,22 @@ module Location where
 import Prelude
 
 import Data.Array (any)
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe, fromMaybe)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Tuple (Tuple(..))
 import Math ((%), floor)
 import Types (Coords, Cut, Direction(..), DirectionTick(..), Location(..), Source, SpriteState, State, Vertex(..), dest, direction, key, slot, source, toVertices)
 
-dampen :: Number -> Location Coords -> Source
-dampen frame location = do
-  src { xpos = src.xpos + (dampF frame) % 2.0 * src.w }
+dampen ::
+  Maybe Number ->
+  Maybe Number ->
+  Number ->
+  Location Coords ->
+  Source
+dampen width factor frame location = do
+  src { xpos = src.xpos + (dampF frame) % 2.0 * (fromMaybe src.w width) }
   where
-    dampF x = x - x % 9.0
+    dampF x = x - x % (fromMaybe 9.0 factor)
     Location src dst = location
 
 toCut ::

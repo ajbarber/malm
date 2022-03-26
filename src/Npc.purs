@@ -3,8 +3,7 @@ module Npc where
 import Prelude
 
 import Data.Int (toNumber)
-import Data.Maybe (maybe)
-import Data.Time.Duration (Milliseconds(..))
+import Data.Maybe (Maybe(..))
 import Drawing as D
 import Effect (Effect)
 import Effect.Aff (Aff)
@@ -12,9 +11,8 @@ import Graphics.Canvas (CanvasImageSource, strokeRect)
 import Image (loadImg)
 import Location (dampen, position, toCut)
 import Location (isObstacle, translate)
-import Math (floor)
 import Record as Record
-import Types (Coords, Cut(..), Direction(..), DirectionTick(..), Location(..), State, dest, direction, frames, key, reverse)
+import Types (Coords, Cut(..), Direction(..), DirectionTick(..), Location(..), State, dest, direction, speed, key, reverse)
 
 file :: String
 file = "assets/npc/npcs.png"
@@ -52,16 +50,17 @@ update state = do
       newPos' = position state.npc
       static = direction (key npc.direction) == None
       i' = if static then 0.0 else toNumber state.frameCount
-      srcPos = dampen i' $ toCut npc.location (direction $ key npc.direction) cuts
+      cut = toCut npc.location (direction $ key npc.direction) cuts
+      srcPos = dampen Nothing Nothing i' cut
       blocked = isObstacle state newPos'
       newPos = case blocked of
         true -> curPos
         false -> newPos'
-  pure $ state{ npc{location = Location srcPos newPos,
-                    direction = if blocked then
-                                  (\x -> DirectionTick (reverse $ direction x) (frames x)) <$> npc.direction
-                                else
-                                  npc.direction }}
+  pure $ state{ npc{ location = Location srcPos newPos,
+                     direction = if blocked then turn <$> npc.direction
+                                 else npc.direction }}
+    where
+      turn x = DirectionTick (reverse $ direction x) (speed x)
 
 draw :: State -> Effect Unit
 draw state = do

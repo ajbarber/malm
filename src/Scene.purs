@@ -47,7 +47,7 @@ init ctx hero npc tiles = do
       },
     npc: {
       img: npc,
-      direction: InputEvent (DirectionTick Up 1.0) KeyDown,
+      direction: InputEvent (DirectionTick Up 1.0),
       action: mempty,
       location: Npc.initLoc,
       animation: Nothing,
