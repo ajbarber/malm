@@ -10,16 +10,15 @@ import Data.Maybe (Maybe)
 import Data.Show.Generic (genericShow)
 import Data.Time.Duration (Milliseconds)
 import Data.Tuple (Tuple)
-import Debug (spy)
 import Graphics.Canvas (CanvasImageSource, Context2D)
-import Web.Event.Event (Event, EventType(..)) as Web
-
 
 attackFrames :: Number
 attackFrames = 180.0
 
 attackCooldown :: Number
 attackCooldown = 20.0
+
+data IsAttacking = Start | Cooldown | False
 
 data Direction = Left | Right | Down | Up | None
 
@@ -52,6 +51,8 @@ instance semigroupAction :: Semigroup Action where
 derive instance eqDirection :: Eq Direction
 
 derive instance eqAction :: Eq Action
+
+derive instance eqIsAttacking :: Eq IsAttacking
 
 derive instance genericDirectionTick :: Generic DirectionTick _
 
@@ -212,7 +213,10 @@ toVertices { xpos, ypos, h, w } = [
   Vertex (xpos + w) ypos,
   Vertex (xpos + w) (ypos + h) ]
 
+attackState :: SpriteState -> IsAttacking
+attackState s = case key s.action of
+  Attacking x -> if x >= attackFrames - attackCooldown then Start else Cooldown
+  _ -> False
+
 isAttacking :: SpriteState -> Boolean
-isAttacking s = case key s.action of
-  Attacking x -> x >= attackFrames - attackCooldown
-  _ -> false
+isAttacking s = attackState s == Start ||  attackState s == Cooldown

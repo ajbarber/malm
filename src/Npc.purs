@@ -9,10 +9,10 @@ import Effect (Effect)
 import Effect.Aff (Aff)
 import Graphics.Canvas (CanvasImageSource, strokeRect)
 import Image (loadImg)
-import Location (dampen, position, toCut)
+import Location (collision', dampen, position, toCut)
 import Location (isObstacle, translate)
 import Record as Record
-import Types (Coords, Cut(..), Direction(..), DirectionTick(..), Location(..), State, SpriteState, dest, direction, key, reverse, speed)
+import Types (Coords, Cut(..), Direction(..), DirectionTick(..), Location(..), SpriteState, State, dest, direction, isAttacking, key, reverse, speed)
 
 file :: String
 file = "assets/npc/npcs.png"
@@ -46,9 +46,11 @@ initLoc = (flip Record.merge baseOffset) <$> Location source dest
 update :: State -> Effect State
 update state = do
   let npc = state.npc
+      hero = state.hero
       curPos = dest npc.location
+      heroPos = dest hero.location
       newPos' = position state.npc
-      static = direction (key npc.direction) == None
+      static = direction (key npc.direction) == None || npc.health == 0
       i' = if static then 0.0 else toNumber state.frameCount
       cut = toCut npc.location (direction $ key npc.direction) (cuts npc)
       srcPos = dampen Nothing Nothing i' cut 2.0
@@ -57,6 +59,9 @@ update state = do
         true -> curPos
         false -> newPos'
   pure $ state{ npc{ location = Location srcPos newPos,
+                     health = if collision' curPos heroPos && isAttacking hero
+                              then 0
+                              else npc.health,
                      direction = if blocked then turn <$> npc.direction
                                  else npc.direction }}
     where
