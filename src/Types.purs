@@ -14,6 +14,13 @@ import Debug (spy)
 import Graphics.Canvas (CanvasImageSource, Context2D)
 import Web.Event.Event (Event, EventType(..)) as Web
 
+
+attackFrames :: Number
+attackFrames = 180.0
+
+attackCooldown :: Number
+attackCooldown = 20.0
+
 data Direction = Left | Right | Down | Up | None
 
 data DirectionTick = DirectionTick Direction Number
@@ -30,10 +37,16 @@ instance semigroupDirection :: Semigroup Direction where
   append None r = r
   append l _ = l
 
+derive instance genericAction :: Generic Action _
+
+instance showAction :: Show Action where
+  show = genericShow
+
 instance monoidAction :: Monoid Action where
   mempty = Default
 
 instance semigroupAction :: Semigroup Action where
+  append (Attacking _) (Attacking r) = Attacking r
   append lhs _ = lhs
 
 derive instance eqDirection :: Eq Direction
@@ -64,7 +77,7 @@ speed (DirectionTick _ b) = b
 
 data AnimationType = Damage | Dying
 
-data Action = Default | Attacking
+data Action = Default | Attacking Number
 
 type Animation = {
   frames :: Int,
@@ -200,4 +213,6 @@ toVertices { xpos, ypos, h, w } = [
   Vertex (xpos + w) (ypos + h) ]
 
 isAttacking :: SpriteState -> Boolean
-isAttacking s = key s.action == Attacking
+isAttacking s = case key s.action of
+  Attacking x -> x >= attackFrames - attackCooldown
+  _ -> false

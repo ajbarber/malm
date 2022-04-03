@@ -11,7 +11,7 @@ import Graphics.Canvas (CanvasImageSource, drawImageFull, strokeRect)
 import Image (loadImg)
 import Location (collision', dampen, isObstacle, position, toCut)
 import Record as Record
-import Types (Animation, AnimationType(..), Coords, Cut(..), Location(..), Scene(..), Source, SpriteState, State, dest, direction, isAttacking, key, speed)
+import Types (Action(..), Animation, AnimationType(..), Coords, Cut(..), Location(..), Scene(..), Source, SpriteState, State, dest, direction, isAttacking, key, speed)
 
 file :: String
 file = "assets/character.png"
@@ -78,6 +78,7 @@ update state = do
   pure $ state{ scene = scene,
                 hero{ location = Location srcPos { perimeter = inflate hero } newPos,
                       health = damage (collision' newPos' npcPos) hero.health,
+                      action = tickAction <$> hero.action,
                       animation = updateAnimFrame state.frameCount hero.animation}}
   where
      inflate hero = if isAttacking hero then 4.0 else 0.0
@@ -86,6 +87,11 @@ damage :: Boolean -> Int -> Int
 damage collision health = case collision of
   true ->  health - 1
   false -> health
+
+tickAction :: Action -> Action
+tickAction Default = Default
+tickAction (Attacking 0.0) = Default
+tickAction (Attacking x) = Attacking (x - 1.0)
 
 updateAnimFrame :: Int -> Maybe Animation -> Maybe Animation
 updateAnimFrame fc anim = removeExpiredFrame (reduceFrame fc <$> anim)

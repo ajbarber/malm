@@ -12,7 +12,7 @@ import Effect.AVar as EVar
 import Effect.Ref (Ref)
 import Effect.Ref (read, write) as Ref
 import Effect.Timer (TimeoutId, clearTimeout, setTimeout)
-import Types (Action(..), AsyncState, Direction(..), DirectionTick(..), EventType(..), InputEvent(..), State)
+import Types (Action(..), AsyncState, Direction(..), DirectionTick(..), EventType(..), InputEvent(..), State, attackFrames)
 import Web.Event.Event (Event)
 import Web.Event.EventTarget (EventListener, addEventListener, eventListener)
 import Web.HTML (window)
@@ -31,7 +31,7 @@ dirDecoder str = dir str where
 
 actionDecoder :: String -> Action
 actionDecoder str = case str of
-  "a" -> Attacking
+  "a" -> Attacking attackFrames
   _ -> Default
 
 eventToString :: Event -> String
