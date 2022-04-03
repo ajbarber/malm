@@ -11,7 +11,7 @@ import Graphics.Canvas (CanvasImageSource, drawImageFull, strokeRect)
 import Image (loadImg)
 import Location (collision', dampen, isObstacle, position, toCut)
 import Record as Record
-import Types (Action(..), Animation, AnimationType(..), Coords, Cut(..), Location(..), Scene(..), Source, SpriteState, State, dest, direction, isAttacking, key, speed)
+import Types (Action(..), Animation, AnimationType(..), Coords, Cut(..), IsAttacking(..), Location(..), Scene(..), Source, SpriteState, State, attackState, dest, direction, isAttacking, key, speed)
 
 file :: String
 file = "assets/character.png"
@@ -60,9 +60,9 @@ cut state =
       i' = if static hero then 0.0 else i
       c = toCut hero.location (direction $ key hero.direction)
   in
-  case isAttacking hero of
-    true -> dampen (Just 31.0) (Just 13.0) i (c $ attackCuts 16.0 20.0) 4.0
-    false -> dampen Nothing Nothing i' (c walkingCuts) 4.0
+  case attackState hero of
+    Start -> dampen (Just 31.0) (Just 13.0) i (c $ attackCuts 16.0 20.0) 4.0
+    _ -> dampen Nothing Nothing i' (c walkingCuts) 4.0
 
 update :: State -> Effect State
 update state = do
@@ -81,7 +81,7 @@ update state = do
                       action = tickAction <$> hero.action,
                       animation = updateAnimFrame state.frameCount hero.animation}}
   where
-     inflate hero = if isAttacking hero then 4.0 else 0.0
+     inflate hero = if attackState hero == Start then 4.0 else 0.0
 
 damage :: Boolean -> Int -> Int
 damage collision health = case collision of
