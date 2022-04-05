@@ -4,10 +4,9 @@ import Prelude
 
 import Data.Array (any)
 import Data.Maybe (Maybe, fromMaybe)
-import Data.Time.Duration (Milliseconds(..))
 import Data.Tuple (Tuple(..))
 import Math ((%), floor)
-import Types (Coords, Cut, Direction(..), DirectionTick(..), Location(..), Source, SpriteState, State, Vertex(..), dest, direction, key, slot, source, toVertices)
+import Types (Coords, Cut, Direction(..), DirectionTick(..), Location(..), Source, SpriteState, State, Vertex(..), dest, key, slot, toVertices)
 
 dampen ::
   Maybe Number ->
@@ -46,6 +45,9 @@ position st = let
     DirectionTick Down f -> coords { yoffset = coords.yoffset + f }
     DirectionTick None _ -> coords
 
+movement :: SpriteState -> Tuple Coords Coords
+movement ss = Tuple (dest ss.location) (position ss)
+
 -- Translates passed sprite coordinates according to where our hero is.
 translate :: State -> Coords -> Coords
 translate state coords = translated { xpos = translated.xpos + translated.xoffset,
@@ -59,48 +61,26 @@ translate' state coords = translated { xpos = translated.xpos + translated.xoffs
   where
     translated = offset coords (dest state.hero.location)
 
--- isBlocked :: State -> Coords -> Boolean
--- isBlocked st loc = isBlocked' st (translate st loc)
-
--- isBlocked' :: State -> Coords -> Boolean
--- isBlocked' st loc = isObstacle' st loc || isBoundary' st loc
-
 isObstacle :: State -> Coords -> Boolean
 isObstacle st loc = isObstacle' st loc { xpos = loc.xpos + loc.xoffset,
                                          ypos = loc.ypos + loc.yoffset }
 
--- isObstacle :: State -> Coords -> Boolean
--- isObstacle st loc = isObstacle' (st { tileMap { walls = walls' st}}) loc
---  where
---    walls' s = map (\w -> w{ location = Location (source w.location) (d' s w)}) s.tileMap.walls
---    d' s w = translate s $ dest w.location
-
 isObstacle' :: State -> Coords -> Boolean
 isObstacle' st loc = any (\x -> collision loc (dest x.location)) st.tileMap.walls
 
-isCollision :: State -> Coords -> Boolean
-isCollision st loc = isCollision' st $ loc { xpos = loc.xpos + loc.xoffset,
-                                             ypos = loc.ypos + loc.yoffset }
+-- isCollision :: State -> Coords -> Boolean
+-- isCollision st loc = isCollision' st $ loc { xpos = loc.xpos + loc.xoffset,
+--                                              ypos = loc.ypos + loc.yoffset }
 
-isCollision' :: State -> Coords -> Boolean
-isCollision' st loc = let npcLoc = dest (st.npc.location) in
-  collision2 (toVertices loc) npcLoc
+-- isCollision' :: State -> Coords -> Boolean
+-- isCollision' st loc = let npcLoc = dest (st.npc.location) in
+--   collision2 (toVertices loc) npcLoc
 
 collision' :: Coords -> Coords -> Boolean
 collision' loc1 loc2 = collision2 (toVertices (off loc1)) (off loc2)
   where
-    off l  = l{xpos = l.xpos + l.xoffset,
-               ypos = l.ypos + l.yoffset}
-
--- isBoundary :: State -> Coords -> Boolean
--- isBoundary st loc = isBoundary' st loc
-
--- isBoundary' :: State -> Coords -> Boolean
--- isBoundary' st loc =
---   loc.xpos <= st.tileMap.xMin ||
---   loc.ypos <= st.tileMap.yMin ||
---   loc.xpos >= st.tileMap.xMax ||
---   loc.ypos >= st.tileMap.yMax
+    off l  = l{xpos = l.xpos + l.xoffset + l.perimeter,
+               ypos = l.ypos + l.yoffset + l.perimeter }
 
 -- Note that offset is applied to the first location passed
 collision :: Coords -> Coords -> Boolean
@@ -117,5 +97,8 @@ collision2 :: Array Vertex -> Coords -> Boolean
 collision2 vertices loc = any (hasVertex loc) vertices
 
 hasVertex :: Coords -> Vertex -> Boolean
-hasVertex { xpos, ypos, w, h} (Vertex x y) =
-  x < xpos + w && x > xpos && y < ypos + h && y > ypos
+hasVertex { perimeter, xpos, ypos, w, h} (Vertex x y) =
+  x < xpos + w + perimeter &&
+  x > xpos - perimeter &&
+  y < ypos + h + perimeter &&
+  y > ypos - perimeter

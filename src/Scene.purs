@@ -47,7 +47,7 @@ init ctx hero npc tiles = do
       width: 16.0,
       height: 20.0
       },
-    npc: {
+    npc: [{
       img: npc,
       direction: InputEvent (DirectionTick Up 1.0),
       action: mempty,
@@ -56,5 +56,5 @@ init ctx hero npc tiles = do
       health: 100,
       width: 24.0,
       height: 28.0
-      },
+      }],
     tileMap: tiles }

@@ -2,16 +2,19 @@ module Hero where
 
 import Prelude
 
+import Data.Array (foldr)
 import Data.Foldable (for_)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
+import Data.Traversable (sequence)
+import Data.Tuple (Tuple (..))
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Graphics.Canvas (CanvasImageSource, drawImageFull, strokeRect)
 import Image (loadImg)
-import Location (collision', dampen, isObstacle, position, toCut)
+import Location (collision', dampen, isObstacle, position, toCut, movement)
 import Record as Record
-import Types (Action(..), Animation, AnimationType(..), Coords, Cut(..), IsAttacking(..), Location(..), Scene(..), Source, SpriteState, State, attackState, dest, direction, isAttacking, key, speed)
+import Types (Action(..), Animation, AnimationType(..), Coords, Cut(..), IsAttacking(..), Location(..), Scene(..), Source, State, SpriteState, attackState, dest, direction, isAttacking, key, speed)
 
 file :: String
 file = "assets/character.png"
@@ -65,23 +68,38 @@ cut state =
     _ -> dampen Nothing Nothing i' (c walkingCuts) 4.0
 
 update :: State -> Effect State
-update state = do
-  let hero = state.hero
-      npcPos = dest state.npc.location
-      heroPos = dest hero.location
-      newPos' =  position hero
-      srcPos = cut state
-      newPos = case (isObstacle state newPos' || static hero) of
-        true -> heroPos
-        false -> newPos'
-      scene = if hero.health < 0 then Dead 100 else state.scene
-  pure $ state{ scene = scene,
-                hero{ location = Location srcPos { perimeter = inflate hero } newPos,
-                      health = damage (collision' newPos' npcPos) hero.health,
-                      action = tickAction <$> hero.action,
-                      animation = updateAnimFrame state.frameCount hero.animation}}
+update state = pure $ foldr updateNpc state' state.npc
   where
-     inflate hero = if attackState hero == Start then 4.0 else 0.0
+    state' = update' state
+
+update' :: State -> State
+update' state = let
+  hero = state.hero
+  Tuple curPos newPos' = movement hero
+  srcPos = cut state
+  newPos = case (isObstacle state newPos' || static hero) of
+    true -> curPos
+    false -> newPos'
+  scene = if hero.health < 0 then Dead 100 else state.scene in
+  state{ scene = scene,
+         hero{ location = Location srcPos { perimeter = inflate hero }
+                          newPos { perimeter = inflate hero },
+               action = tickAction <$> hero.action,
+               animation = updateAnimFrame state.frameCount hero.animation}}
+
+
+-- | update state in relation to npc engagements
+updateNpc :: SpriteState -> State -> State
+updateNpc npc state = let
+  npcPos = dest npc.location
+  hero = state.hero
+  newPos' =  position hero
+  uninflatedPos = newPos' { perimeter = 0.0 } in
+  state{ hero { health = damage (collision' uninflatedPos npcPos) hero.health }}
+
+-- | sword inflates the size of sprite rectangle
+inflate :: SpriteState -> Number
+inflate hero = if attackState hero == Start then 4.0 else 0.0
 
 damage :: Boolean -> Int -> Int
 damage collision health = case collision of

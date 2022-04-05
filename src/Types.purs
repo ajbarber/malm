@@ -9,14 +9,14 @@ import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
 import Data.Show.Generic (genericShow)
 import Data.Time.Duration (Milliseconds)
-import Data.Tuple (Tuple)
+import Data.Tuple (Tuple(..))
 import Graphics.Canvas (CanvasImageSource, Context2D)
 
 attackFrames :: Number
 attackFrames = 180.0
 
 attackCooldown :: Number
-attackCooldown = 20.0
+attackCooldown = 60.0
 
 data IsAttacking = Start | Cooldown | False
 
@@ -102,7 +102,7 @@ type State = { ctx :: Context2D,
                frameCount :: Int,
                scene :: Scene,
                hero :: SpriteState,
-               npc :: SpriteState
+               npc :: Array SpriteState
              }
 
 data Scene = Main | Dead Int
