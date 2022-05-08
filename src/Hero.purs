@@ -7,14 +7,14 @@ import Data.Foldable (for_)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
 import Data.Traversable (sequence)
-import Data.Tuple (Tuple (..))
+import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Graphics.Canvas (CanvasImageSource, drawImageFull, strokeRect)
 import Image (loadImg)
 import Location (collision', dampen, isObstacle, position, toCut, movement)
 import Record as Record
-import Types (Action(..), Animation, AnimationType(..), Coords, Cut(..), IsAttacking(..), Location(..), Scene(..), Source, State, SpriteState, attackState, dest, direction, isAttacking, key, speed)
+import Types (Action(..), Animation, AnimationType(..), Coords, Cut(..), IsAttacking(..), Location(..), Scene(..), Source, SpriteState, State, attackState, dest, direction, isAttacking, key, speed)
 
 file :: String
 file = "assets/character.png"
@@ -72,21 +72,29 @@ update state = pure $ foldr updateNpc state' state.npc
   where
     state' = update' state
 
-update' :: State -> State
-update' state = let
-  hero = state.hero
-  Tuple curPos newPos' = movement hero
-  srcPos = cut state
-  newPos = case (isObstacle state newPos' || static hero) of
-    true -> curPos
-    false -> newPos'
-  scene = if hero.health < 0 then Dead 100 else state.scene in
-  state{ scene = scene,
-         hero{ location = Location srcPos { perimeter = inflate hero }
-                          newPos { perimeter = inflate hero },
-               action = tickAction <$> hero.action,
-               animation = updateAnimFrame state.frameCount hero.animation}}
+perimeter :: State -> State
+perimeter state =
+  let perimeter' = inflate state.hero in
+  state { hero { location = (\x -> x{ perimeter = perimeter' }) <$> state.hero.location }}
 
+scene :: State -> State
+scene state = let s = if state.hero.health < 0 then Dead 100 else state.scene in state {scene = s}
+
+still :: State -> Boolean
+still state = (isObstacle state (dest state.hero.location) || static state.hero)
+
+move :: State -> State
+move state = let Tuple curPos newPos = movement state.hero in
+  state { hero { location = Location (cut state) (if (still state) then curPos else newPos) } }
+
+action :: State -> State
+action state = state { hero { action = tickAction <$> state.hero.action } }
+
+animations :: State -> State
+animations state = state { hero { animation = updateAnimFrame state.frameCount state.hero.animation } }
+
+update' :: State -> State
+update' = animations <<< action <<< scene <<< perimeter <<< move
 
 -- | update state in relation to npc engagements
 updateNpc :: SpriteState -> State -> State
