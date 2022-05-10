@@ -5,6 +5,7 @@ import Prelude
 import Data.DateTime.Instant (unInstant)
 import Data.Maybe (Maybe(..))
 import Dead as Dead
+import Debug (spy)
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Now (now)
@@ -15,13 +16,13 @@ import Types (Action(..), Direction(..), DirectionTick(..), EventType(..), Input
 import World as World
 
 scene :: State -> Scene
-scene state = if state.hero.health < 0 then Dead 100
+scene state = if (state.hero.health < 0 && state.scene == Main) then Dead 100
               else state.scene
 
 update :: State -> Effect State
 update state = case (scene state) of
     Main -> World.update state
-    Dead seconds -> Dead.update state
+    Dead seconds -> Dead.update state { scene = Dead seconds }
 
 draw :: State -> Effect Unit
 draw state = case state.scene of

@@ -107,6 +107,8 @@ type State = { ctx :: Context2D,
 
 data Scene = Main | Dead Int
 
+derive instance eqScene :: Eq Scene
+
 data EventType = KeyDown | KeyUp
 
 derive instance genericEventType :: Generic EventType _
