@@ -1,0 +1,89 @@
+module Sprite where
+
+import Prelude
+
+import Data.Maybe (Maybe(..))
+import Data.Tuple (Tuple(..))
+import Effect (Effect)
+import Location (collision', isObstacle, movement)
+import Types (Action(..), Animation, AnimationType(..), Coords, DirectionTick(..), IsAttacking(..), Location(..), Source, SpriteState, State, attackState, dest, direction, key, reverse, speed)
+
+static :: SpriteState -> Boolean
+static ss = (speed <<< key $ ss.direction) == 0.0
+
+perimeter :: SpriteState -> SpriteState
+perimeter sprite =
+  let perimeter' = inflate sprite in
+  sprite { location = (\x -> x{ perimeter = perimeter' }) <$> sprite.location }
+
+blocked :: State -> SpriteState -> Boolean
+blocked state sprite = (isObstacle state (dest sprite.location) || static sprite)
+
+move :: Source -> (Coords -> Boolean) -> SpriteState -> SpriteState
+move cut f sprite = let Tuple curPos newPos = movement sprite in
+  sprite { location = Location cut (if (f newPos || static sprite) then curPos
+                                    else newPos) }
+
+animations :: Int -> SpriteState -> SpriteState
+animations frame sprite = sprite { animation = updateAnimFrame frame sprite.animation }
+
+action :: SpriteState -> SpriteState
+action sprite = sprite  { action = tickAction <$> sprite.action }
+
+-- | attacking inflates the size of sprite rectangle, we need to draw the weapon
+inflate :: SpriteState -> Number
+inflate sprite = if attackState sprite == Start then 4.0 else 0.0
+
+-- | engagements with other sprites
+health :: (SpriteState -> SpriteState -> Boolean) ->
+          SpriteState ->
+          SpriteState ->
+          SpriteState
+health f them us = us{ health = damage (f us them) us.health }
+
+-- | ignore perimeter inflation in collision detection
+isCollision :: SpriteState -> SpriteState -> Boolean
+isCollision us them = collision' (position' us) (position' them)
+
+-- | include perimeter inflation in collision detection
+isCollision' :: SpriteState -> SpriteState -> Boolean
+isCollision' us them = collision' (dest us.location) (dest them.location)
+
+uninflate :: Coords -> Coords
+uninflate coords = coords { perimeter = 0.0 }
+
+position' :: SpriteState -> Coords
+position' s = uninflate $ dest s.location
+
+damage :: Boolean -> Int -> Int
+damage collision h = case collision of
+  true ->  h - 1
+  false -> h
+
+turnBlocked :: (Coords -> Boolean) -> SpriteState -> SpriteState
+turnBlocked f s = let Tuple _ newPos = movement s in
+  s { direction = if (f newPos) then turn <$> s.direction
+                  else s.direction }
+
+turn :: DirectionTick -> DirectionTick
+turn x = DirectionTick (reverse $ direction x) (speed x)
+
+tickAction :: Action -> Action
+tickAction Default = Default
+tickAction (Attacking 0.0) = Default
+tickAction (Attacking x) = Attacking (x - 1.0)
+
+updateAnimFrame :: Int -> Maybe Animation -> Maybe Animation
+updateAnimFrame fc anim = removeExpiredFrame (reduceFrame fc <$> anim)
+   where
+     reduceFrame n a = a { frames = a.frames - n }
+
+removeExpiredFrame :: Maybe Animation -> Maybe Animation
+removeExpiredFrame animation = case animation of
+  Just anim -> if anim.frames < 0 then Nothing else animation
+  Nothing -> Nothing
+
+drawAnimation :: Animation -> Effect Unit
+drawAnimation anim = case anim.type_ of
+  Damage -> pure unit
+  Dying -> pure unit

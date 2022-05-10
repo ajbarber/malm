@@ -2,23 +2,18 @@ module Npc where
 
 import Prelude
 
-import Data.Array (foldl, foldr, mapMaybe)
 import Data.Foldable (sequence_)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
-import Data.Semigroup.Foldable (foldr1)
-import Data.Traversable (sequence)
-import Data.Tuple (Tuple(..))
-import Debug (traceM)
 import Drawing as D
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Graphics.Canvas (CanvasImageSource, fillText, strokeRect)
 import Image (loadImg)
-import Location (collision', dampen, position, toCut)
-import Location (isObstacle, translate, movement)
+import Location (dampen, isObstacle, toCut, translate)
 import Record as Record
-import Types (Coords, Cut(..), Direction(..), DirectionTick(..), Location(..), SpriteState, State, dest, direction, isAttacking, key, reverse, speed)
+import Sprite (action, animations, health, isCollision', move, perimeter, static, turnBlocked)
+import Types (Coords, Cut(..), Location(..), Source, SpriteState, State, direction, isAttacking, key)
 
 file :: String
 file = "assets/npc/npcs.png"
@@ -50,32 +45,32 @@ initLoc = (flip Record.merge baseOffset) <$> Location source dest
     source = { xpos: 680.0,  ypos: 592.0, w: defaultWidth, h: defaultHeight }
 
 update :: State -> Effect State
-update state = pure $ state { npc = mapMaybe (update' state) state.npc }
+update state = pure $ state { npc = map (update' state) state.npc }
 
-update' :: State -> SpriteState -> Maybe SpriteState
-update' state npc = let
-  heroPos = dest state.hero.location
-  Tuple curPos newPos' = movement npc
-  static = direction (key npc.direction) == None
-  i' = if static then 0.0 else toNumber state.frameCount
-  cut = toCut npc.location (direction $ key npc.direction) (cuts npc)
-  srcPos = dampen Nothing Nothing i' cut 2.0
-  blocked = isObstacle state newPos'
-  colliding = collision' curPos heroPos
-  attacking = isAttacking state.hero
-  newPos = case blocked of
-    true -> curPos
-    false -> newPos'
-  npc' = npc { location = Location srcPos newPos,
-               health = if colliding && attacking then npc.health - 1
-                        else npc.health,
-               direction = if blocked then turn <$> npc.direction
-                           else npc.direction } in
-  case npc.health <= 0 of
-    true -> Nothing
-    false -> Just npc'
-    where
-      turn x = DirectionTick (reverse $ direction x) (speed x)
+cut :: Int -> SpriteState -> Source
+cut frameCount sprite =
+  let i = toNumber frameCount
+      i' = if static sprite then 0.0 else i
+      c = toCut sprite.location (direction $ key sprite.direction)
+  in
+  dampen Nothing Nothing i' (c $ cuts sprite) 2.0
+
+move' :: State -> SpriteState -> SpriteState
+move' s ss = move (cut s.frameCount ss) (isObstacle s) ss
+
+collisionFunc :: SpriteState -> SpriteState -> Boolean
+collisionFunc us them = isCollision' us them && isAttacking them
+
+turnAround :: State -> SpriteState -> SpriteState
+turnAround = turnBlocked <<< isObstacle
+
+update' :: State -> SpriteState -> SpriteState
+update' s = (animations s.frameCount <<<
+             health collisionFunc s.hero <<<
+             turnAround s <<<
+             action <<<
+             perimeter <<<
+             move' s)
 
 draw :: State -> Effect Unit
 draw state = sequence_ $ map (drawSingle state) state.npc

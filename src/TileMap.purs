@@ -17,6 +17,9 @@ import Image (loadImg)
 import Record as Record
 import Types (InputCoordMap, LoadedTile, Location(..), TileData, TileMap(..), LoadedTileMap, dest)
 
+baseOffset :: { xoffset :: Number, yoffset :: Number, perimeter :: Number }
+baseOffset = { xoffset: 0.0, yoffset: 0.0, perimeter: 0.0}
+
 loadedTileMap :: Aff LoadedTileMap
 loadedTileMap = do
   arr <- loadedTiles
@@ -57,7 +60,7 @@ toTileData icm = case icm of
   Left e -> []
   Right arr -> map (\x -> {
     file: "Overworld.png",
-    loc: Record.merge Hero.baseOffset <$> Location x.src x.dest,
+    loc: Record.merge baseOffset <$> Location x.src x.dest,
     wall: x.wall }) arr
 
 tileMap :: TileMap

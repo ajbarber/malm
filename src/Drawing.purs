@@ -2,10 +2,10 @@ module Drawing where
 
 import Prelude
 
-import Location (translate)
 import Effect (Effect)
-import Graphics.Canvas (CanvasImageSource, drawImageFull)
+import Graphics.Canvas (CanvasImageSource, drawImageFull, strokeRect)
 import Location (offset)
+import Location (translate)
 import Types (Location(..), State, Coords, dest)
 
 -- Renders a sprite. Requires the state to perform a translation
@@ -14,15 +14,16 @@ draw ::
   forall a. State ->
   { img :: CanvasImageSource, location :: Location Coords | a } ->
   Effect Unit
-draw state { img, location: Location srcPos dstPos } = do
+draw state { img, location: Location srcPos dstPos } = let
+  fullPerimeter = 2.0 * srcPos.perimeter in do
   drawImageFull state.ctx img
     srcPos.xpos
     srcPos.ypos
-    srcPos.w
-    srcPos.h
-    dstPos'.xpos
+    (srcPos.w + fullPerimeter)
+    (srcPos.h + fullPerimeter)
+    (dstPos'.xpos )
     dstPos'.ypos
-    dstPos'.w
-    dstPos'.h
+    (dstPos'.w + fullPerimeter)
+    (dstPos'.h + fullPerimeter)
   where
     dstPos' = translate state dstPos
