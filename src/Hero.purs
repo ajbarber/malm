@@ -14,7 +14,7 @@ import Image (loadImg)
 import Location (dampen, isObstacle, toCut)
 import Record as Record
 import Sprite (action, animations, drawAnimation, health, isCollision, move, perimeter, static)
-import Types (Coords, Cut(..), IsAttacking(..), Location(..), Source, SpriteState, State, attackState, direction, key)
+import Types (Coords, Cut(..), IsAttacking(..), Location(..), Source, SpriteState, State, attackState, direction, foldMovement, key)
 
 file :: String
 file = "assets/character.png"
@@ -57,7 +57,7 @@ cut :: Int -> SpriteState -> Source
 cut frameCount sprite =
   let i = toNumber frameCount
       i' = if static sprite then 0.0 else i
-      c = toCut sprite.location (direction $ key sprite.direction)
+      c = toCut sprite.location (foldMovement (direction <<< key) sprite.direction)
   in
   case attackState sprite of
     Start -> dampen (Just 31.0) (Just 13.0) i (c $ attackCuts 16.0 20.0) 4.0

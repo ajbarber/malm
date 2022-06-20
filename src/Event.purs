@@ -12,7 +12,7 @@ import Effect.AVar as EVar
 import Effect.Ref (Ref)
 import Effect.Ref (read, write) as Ref
 import Effect.Timer (TimeoutId, clearTimeout, setTimeout)
-import Types (Action(..), AsyncState, Direction(..), DirectionTick(..), EventType(..), InputEvent(..), State, attackFrames)
+import Types (Action(..), AsyncState, Direction(..), DirectionTick(..), EventType(..), InputEvent(..), Movement(..), State, attackFrames)
 import Web.Event.Event (Event)
 import Web.Event.EventTarget (EventListener, addEventListener, eventListener)
 import Web.HTML (window)
@@ -85,8 +85,8 @@ marshall :: AVar AsyncState -> State -> Effect State
 marshall aVar state = let h = state.hero in do
   e <- EVar.tryRead aVar
   pure $ state { hero {
-                        direction = tick dirDecoder e <> h.direction,
-                        action = tick actionDecoder e <> h.action } }
+                    direction = map (append $ tick dirDecoder e) h.direction,
+                    action = tick actionDecoder e <> h.action } }
 
 debounceInner ::
   forall a.

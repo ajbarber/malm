@@ -13,7 +13,7 @@ import Image (loadImg)
 import Location (dampen, isObstacle, toCut, translate)
 import Record as Record
 import Sprite (action, animations, health, isCollision', move, perimeter, static, turnBlocked)
-import Types (Coords, Cut(..), Location(..), Source, SpriteState, State, direction, isAttacking, key)
+import Types (Coords, Cut(..), Location(..), Source, SpriteState, State, direction, foldMovement, isAttacking, key)
 
 file :: String
 file = "assets/npc/npcs.png"
@@ -51,7 +51,7 @@ cut :: Int -> SpriteState -> Source
 cut frameCount sprite =
   let i = toNumber frameCount
       i' = if static sprite then 0.0 else i
-      c = toCut sprite.location (direction $ key sprite.direction)
+      c = toCut sprite.location (foldMovement (direction <<< key) sprite.direction)
   in
   dampen Nothing Nothing i' (c $ cuts sprite) 2.0
 
@@ -65,12 +65,12 @@ turnAround :: State -> SpriteState -> SpriteState
 turnAround = turnBlocked <<< isObstacle
 
 update' :: State -> SpriteState -> SpriteState
-update' s = (animations s.frameCount <<<
-             health collisionFunc s.hero <<<
-             turnAround s <<<
-             action <<<
-             perimeter <<<
-             move' s)
+update' s = (animations s.frameCount
+             <<< health collisionFunc s.hero
+             <<< turnAround s
+             <<< action
+             <<< perimeter
+             <<< move' s)
 
 draw :: State -> Effect Unit
 draw state = sequence_ $ map (drawSingle state) state.npc

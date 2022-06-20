@@ -12,7 +12,7 @@ import Effect.Now (now)
 import Graphics.Canvas (CanvasImageSource, Context2D)
 import Hero as Hero
 import Npc as Npc
-import Types (Action(..), Direction(..), DirectionTick(..), EventType(..), InputEvent(..), LoadedTileMap, Scene(..), State)
+import Types (Action(..), Direction(..), DirectionTick(..), EventType(..), InputEvent(..), LoadedTileMap, Movement(..), Path(..), Scene(..), State)
 import World as World
 
 scene :: State -> Scene
@@ -44,7 +44,7 @@ init ctx hero npc tiles = do
     ctx: ctx,
     hero: {
       img: hero,
-      direction: mempty,
+      direction: InputMovement mempty,
       action: mempty,
       location: Hero.initLoc,
       animation: Nothing,
@@ -54,7 +54,7 @@ init ctx hero npc tiles = do
       },
     npc: [{
       img: npc,
-      direction: InputEvent (DirectionTick Up 1.0),
+      direction: InputMovement (InputEvent (DirectionTick Up 1.0)),
       action: mempty,
       location: Npc.initLoc,
       animation: Nothing,

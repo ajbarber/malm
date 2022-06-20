@@ -6,7 +6,7 @@ import Data.Array (any)
 import Data.Maybe (Maybe, fromMaybe)
 import Data.Tuple (Tuple(..))
 import Math ((%), floor)
-import Types (Coords, Cut, Direction(..), DirectionTick(..), Location(..), Source, SpriteState, State, Vertex(..), dest, key, slot, toVertices)
+import Types (Coords, Cut, Direction(..), DirectionTick(..), InputEvent(..), Location(..), Movement(..), Source, SpriteState, State, Vertex(..), dest, key, slot, toVertices)
 
 dampen ::
   Maybe Number ->
@@ -23,7 +23,7 @@ dampen width factor frame location ncuts = do
 
 toCut ::
   Location Coords ->
-  Direction ->
+  Maybe Direction ->
   Cut Coords ->
   Location Coords
 toCut loc dir cuts = let src = slot cuts dir in
@@ -38,12 +38,18 @@ offset hero other = other { xpos=trans1, ypos=trans2 }
 position :: SpriteState -> Coords
 position st = let
   coords = dest st.location in
-  case (key st.direction) of
-    DirectionTick Left f -> coords { xoffset = coords.xoffset - f }
-    DirectionTick Right f -> coords { xoffset = coords.xoffset + f }
-    DirectionTick Up f -> coords { yoffset = coords.yoffset - f }
-    DirectionTick Down f -> coords { yoffset = coords.yoffset + f }
-    DirectionTick None _ -> coords
+  case st.direction of
+    InputMovement ied -> inputDrivenPosition ied coords
+    PathMovement p -> { h: 0.0, perimeter: 0.0, w: 0.0,
+                        xoffset:0.0, yoffset: 0.0,  xpos: 0.0, ypos: 0.0}
+
+inputDrivenPosition :: InputEvent DirectionTick -> Coords -> Coords
+inputDrivenPosition ied src = case (key ied) of
+    DirectionTick Left f -> src { xoffset = src.xoffset - f }
+    DirectionTick Right f -> src { xoffset = src.xoffset + f }
+    DirectionTick Up f -> src { yoffset = src.yoffset - f }
+    DirectionTick Down f -> src { yoffset = src.yoffset + f }
+    DirectionTick None _ -> src
 
 movement :: SpriteState -> Tuple Coords Coords
 movement ss = Tuple (dest ss.location) (position ss)

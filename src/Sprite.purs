@@ -6,10 +6,10 @@ import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Location (collision', isObstacle, movement)
-import Types (Action(..), Animation, AnimationType(..), Coords, DirectionTick(..), IsAttacking(..), Location(..), Source, SpriteState, State, attackState, dest, direction, key, reverse, speed)
+import Types (Action(..), Animation, AnimationType(..), Coords, DirectionTick(..), IsAttacking(..), Location(..), Source, SpriteState, State, attackState, dest, direction, foldMovement, key, reverse, speed)
 
 static :: SpriteState -> Boolean
-static ss = (speed <<< key $ ss.direction) == 0.0
+static ss = foldMovement (speed <<< key) ss.direction == Just 0.0
 
 perimeter :: SpriteState -> SpriteState
 perimeter sprite =
@@ -62,7 +62,7 @@ damage collision h = case collision of
 
 turnBlocked :: (Coords -> Boolean) -> SpriteState -> SpriteState
 turnBlocked f s = let Tuple _ newPos = movement s in
-  s { direction = if (f newPos) then turn <$> s.direction
+  s { direction = if (f newPos) then (map turn) <$> s.direction
                   else s.direction }
 
 turn :: DirectionTick -> DirectionTick

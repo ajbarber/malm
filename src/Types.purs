@@ -6,10 +6,10 @@ import Data.Argonaut.Core (Json)
 import Data.Argonaut.Decode (JsonDecodeError, decodeJson)
 import Data.Either (Either)
 import Data.Generic.Rep (class Generic)
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe(..))
 import Data.Show.Generic (genericShow)
 import Data.Time.Duration (Milliseconds)
-import Data.Tuple (Tuple(..))
+import Data.Tuple (Tuple)
 import Graphics.Canvas (CanvasImageSource, Context2D)
 
 attackFrames :: Number
@@ -24,6 +24,9 @@ data Direction = Left | Right | Down | Up | None
 
 data DirectionTick = DirectionTick Direction Number
 
+type Duration = Int
+
+data Path = Path DirectionTick Duration Path | End
 derive instance genericDirection :: Generic Direction _
 
 instance showDirection :: Show Direction where
@@ -85,10 +88,23 @@ type Animation = {
   type_ :: AnimationType
 }
 
+instance functorMovement :: Functor Movement where
+  map f (InputMovement d) = InputMovement (f d)
+  map _ (PathMovement p) = PathMovement p
+
+foldMovement :: forall a b. (a -> b) -> Movement a -> Maybe b
+foldMovement f movement = case movement of
+  InputMovement d -> Just (f d)
+  PathMovement _ -> Nothing
+
+-- Movement is either some input event describing some motion type a
+-- or a path we've calculated for the sprite
+data Movement a = InputMovement a | PathMovement Path
+
 type SpriteState = {
   img :: CanvasImageSource,
   location :: Location Coords,
-  direction :: InputEvent DirectionTick,
+  direction :: Movement (InputEvent DirectionTick),
   action :: InputEvent Action,
   health :: Int,
   width :: Number,
@@ -173,6 +189,8 @@ type TileData = { file :: String,
 
 data Cut a = Cut a a a a
 
+data Neighbours = CoordsIn CoordsIn CoordsIn CoordsIn
+
 derive instance cutFunctor :: Functor Cut
 
 type LoadedTile = { img :: CanvasImageSource, location :: Location Coords, wall :: Boolean }
@@ -193,13 +211,14 @@ dest (Location _ d) = d
 source :: Location Coords -> Coords
 source (Location s _) = s
 
-slot :: Cut Coords -> Direction -> Source
-slot (Cut l r u d) dir = case dir of
+slot :: Cut Coords -> Maybe Direction -> Source
+slot (Cut l r u d) (Just dir) = case dir of
   Left -> l
   Right -> r
   Up -> u
   Down -> d
   None-> d
+slot (Cut l r u d) Nothing = d
 
 reverse :: Direction -> Direction
 reverse Up = Down
