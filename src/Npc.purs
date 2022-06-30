@@ -51,7 +51,7 @@ cut :: Int -> SpriteState -> Source
 cut frameCount sprite =
   let i = toNumber frameCount
       i' = if static sprite then 0.0 else i
-      c = toCut sprite.location (foldMovement (direction <<< key) sprite.direction)
+      c = toCut sprite.location (foldMovement direction sprite.direction)
   in
   dampen Nothing Nothing i' (c $ cuts sprite) 2.0
 
@@ -67,7 +67,6 @@ turnAround = turnBlocked <<< isObstacle
 update' :: State -> SpriteState -> SpriteState
 update' s = (animations s.frameCount
              <<< health collisionFunc s.hero
-             <<< turnAround s
              <<< action
              <<< perimeter
              <<< move' s)

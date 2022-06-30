@@ -5,14 +5,13 @@ import Prelude
 import Data.DateTime.Instant (unInstant)
 import Data.Maybe (Maybe(..))
 import Dead as Dead
-import Debug (spy)
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Now (now)
 import Graphics.Canvas (CanvasImageSource, Context2D)
 import Hero as Hero
 import Npc as Npc
-import Types (Action(..), Direction(..), DirectionTick(..), EventType(..), InputEvent(..), LoadedTileMap, Movement(..), Path(..), Scene(..), State)
+import Types (Direction(..), DirectionTick(..), LoadedTileMap, Movement(..), Path(..), Scene(..), State)
 import World as World
 
 scene :: State -> Scene
@@ -27,7 +26,7 @@ update state = case (scene state) of
 draw :: State -> Effect Unit
 draw state = case state.scene of
   Main -> World.draw state
-  Dead a -> Dead.draw state
+  Dead _ -> Dead.draw state
 
 init ::
   Context2D ->
@@ -54,7 +53,7 @@ init ctx hero npc tiles = do
       },
     npc: [{
       img: npc,
-      direction: InputMovement (InputEvent (DirectionTick Up 1.0)),
+      direction: PathMovement (Path (DirectionTick Left 1.0) 60.0 (Path (DirectionTick Up 1.0) 40.0 (Path (DirectionTick Left 1.0) 40.0 End))),
       action: mempty,
       location: Npc.initLoc,
       animation: Nothing,

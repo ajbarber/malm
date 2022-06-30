@@ -57,7 +57,7 @@ cut :: Int -> SpriteState -> Source
 cut frameCount sprite =
   let i = toNumber frameCount
       i' = if static sprite then 0.0 else i
-      c = toCut sprite.location (foldMovement (direction <<< key) sprite.direction)
+      c = toCut sprite.location (foldMovement direction sprite.direction)
   in
   case attackState sprite of
     Start -> dampen (Just 31.0) (Just 13.0) i (c $ attackCuts 16.0 20.0) 4.0

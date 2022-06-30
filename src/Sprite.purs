@@ -4,12 +4,13 @@ import Prelude
 
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
+import Debug (spy)
 import Effect (Effect)
-import Location (collision', isObstacle, movement)
-import Types (Action(..), Animation, AnimationType(..), Coords, DirectionTick(..), IsAttacking(..), Location(..), Source, SpriteState, State, attackState, dest, direction, foldMovement, key, reverse, speed)
+import Location (collision', distance, isObstacle, movement, position)
+import Types (Action(..), Animation, AnimationType(..), Coords, DirectionTick(..), IsAttacking(..), Location(..), Movement(..), Path(..), Source, SpriteState, State, attackState, dest, direction, foldMovement, key, reverse, speed)
 
 static :: SpriteState -> Boolean
-static ss = foldMovement (speed <<< key) ss.direction == Just 0.0
+static ss = foldMovement speed ss.direction == Just 0.0
 
 perimeter :: SpriteState -> SpriteState
 perimeter sprite =
@@ -20,9 +21,21 @@ blocked :: State -> SpriteState -> Boolean
 blocked state sprite = (isObstacle state (dest sprite.location) || static sprite)
 
 move :: Source -> (Coords -> Boolean) -> SpriteState -> SpriteState
-move cut f sprite = let Tuple curPos newPos = movement sprite in
-  sprite { location = Location cut (if (f newPos || static sprite) then curPos
-                                    else newPos) }
+move cut f sprite = let
+  oldPos = dest sprite.location
+  newPos = position sprite in
+  sprite { location = Location cut (if (f newPos || static sprite) then oldPos
+                                    else newPos),
+           direction = updatePath oldPos newPos sprite.direction }
+
+-- Returns a new path subtracting the distance travelled on the current path leg
+-- If we have travelled all the distance on that leg, remove the node
+updatePath :: forall a. Coords -> Coords -> Movement a -> Movement a
+updatePath old new (PathMovement (Path a d rest)) = newPath (Path a d rest) (d - (distance old new))
+  where
+    newPath (Path p _ r) dst = if dst > 0.0 then PathMovement (Path p dst r) else PathMovement r
+    newPath End _ = PathMovement End
+updatePath _ _ i = i
 
 animations :: Int -> SpriteState -> SpriteState
 animations frame sprite = sprite { animation = updateAnimFrame frame sprite.animation }
@@ -61,8 +74,8 @@ damage collision h = case collision of
   false -> h
 
 turnBlocked :: (Coords -> Boolean) -> SpriteState -> SpriteState
-turnBlocked f s = let Tuple _ newPos = movement s in
-  s { direction = if (f newPos) then (map turn) <$> s.direction
+turnBlocked f s = let newPos = movement s in
+  s { direction = if (f newPos) then turn <$> s.direction
                   else s.direction }
 
 turn :: DirectionTick -> DirectionTick

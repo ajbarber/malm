@@ -24,9 +24,8 @@ data Direction = Left | Right | Down | Up | None
 
 data DirectionTick = DirectionTick Direction Number
 
-type Duration = Int
+type Duration = Number
 
-data Path = Path DirectionTick Duration Path | End
 derive instance genericDirection :: Generic Direction _
 
 instance showDirection :: Show Direction where
@@ -89,22 +88,28 @@ type Animation = {
 }
 
 instance functorMovement :: Functor Movement where
-  map f (InputMovement d) = InputMovement (f d)
-  map _ (PathMovement p) = PathMovement p
+  map f (InputMovement d) = InputMovement (map f d)
+  map f (PathMovement p) = PathMovement (map f p)
 
 foldMovement :: forall a b. (a -> b) -> Movement a -> Maybe b
 foldMovement f movement = case movement of
-  InputMovement d -> Just (f d)
+  InputMovement (InputEvent d) -> Just (f d)
   PathMovement _ -> Nothing
 
 -- Movement is either some input event describing some motion type a
 -- or a path we've calculated for the sprite
-data Movement a = InputMovement a | PathMovement Path
+data Movement a = InputMovement (InputEvent a) | PathMovement (Path a)
+
+data Path a = Path a Duration (Path a) | End
+
+instance functorPath :: Functor Path where
+  map f (Path a d p) = Path (f a) d (map f p)
+  map _ End = End
 
 type SpriteState = {
   img :: CanvasImageSource,
   location :: Location Coords,
-  direction :: Movement (InputEvent DirectionTick),
+  direction :: Movement DirectionTick,
   action :: InputEvent Action,
   health :: Int,
   width :: Number,

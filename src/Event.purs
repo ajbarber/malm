@@ -41,7 +41,7 @@ handleEvent ::
   EventType ->
   Array String ->
   AVar AsyncState ->
-  Effect EventListener
+ Effect EventListener
 handleEvent evType evKeys aVar = eventListener do
     \e -> for_ (filtered e) do \n -> handleEventInner evType aVar n
   where
@@ -78,15 +78,15 @@ tick ::
   Monoid m =>
   (String -> m) ->
   Maybe AsyncState ->
-  InputEvent m
-tick decoder e = fromMaybe mempty $ (InputEvent <<< decoder <<< fst) <$> (e >>= head)
+  m
+tick decoder e = fromMaybe mempty $ (decoder <<< fst) <$> (e >>= head)
 
 marshall :: AVar AsyncState -> State -> Effect State
 marshall aVar state = let h = state.hero in do
   e <- EVar.tryRead aVar
   pure $ state { hero {
                     direction = map (append $ tick dirDecoder e) h.direction,
-                    action = tick actionDecoder e <> h.action } }
+                    action = (tick (InputEvent <<< actionDecoder) e <> h.action) } }
 
 debounceInner ::
   forall a.
