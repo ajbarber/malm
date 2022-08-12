@@ -112,7 +112,6 @@ collision'' loc1 loc2 = collision2 (toVertices (off loc1)) (off loc2)
     off l  = l{xpos = l.xpos + l.perimeter,
                ypos = l.ypos + l.perimeter }
 
-
 -- Note that offset is applied to the first location passed
 collision :: Coords -> Coords -> Boolean
 collision loc1 loc2  = xCollision && yCollision
