@@ -10,7 +10,9 @@ import Data.Maybe (Maybe(..))
 import Data.Show.Generic (genericShow)
 import Data.Time.Duration (Milliseconds)
 import Data.Tuple (Tuple)
+import Graph (class Graph)
 import Graphics.Canvas (CanvasImageSource, Context2D)
+import Tree (Gr(..))
 
 attackFrames :: Number
 attackFrames = 180.0
@@ -24,7 +26,7 @@ data Direction = Left | Right | Down | Up | None
 
 data DirectionTick = DirectionTick Direction Number
 
-type Duration = Number
+type Distance = Number
 
 derive instance genericDirection :: Generic Direction _
 
@@ -100,11 +102,20 @@ foldMovement f movement = case movement of
 -- or a path we've calculated for the sprite
 data Movement a = InputMovement (InputEvent a) | PathMovement (Path a)
 
-data Path a = Path a Duration (Path a) | End
+data Path a = Path a Distance (Path a) | End
+
+derive instance eqMovement :: Eq a => Eq (Movement a)
+
+derive instance eqPath :: Eq a => Eq (Path a)
+
+instance pathShow :: (Show a) => Show (Path a)  where
+  show (Path a d p) = show p <> "[" <> show a <> ", Distance:" <> show d <> "]"
+  show End = "End"
 
 instance functorPath :: Functor Path where
   map f (Path a d p) = Path (f a) d (map f p)
   map _ End = End
+
 
 type SpriteState = {
   img :: CanvasImageSource,
@@ -119,6 +130,7 @@ type SpriteState = {
 
 type State = { ctx :: Context2D,
                tileMap :: LoadedTileMap,
+               graph :: Gr Int Int,
                deltaTime :: Milliseconds,
                frameCount :: Int,
                scene :: Scene,
@@ -198,7 +210,8 @@ data Neighbours = CoordsIn CoordsIn CoordsIn CoordsIn
 
 derive instance cutFunctor :: Functor Cut
 
-type LoadedTile = { img :: CanvasImageSource, location :: Location Coords, wall :: Boolean }
+type LoadedTileA a = { location :: Location Coords, wall :: Boolean | a}
+type LoadedTile = LoadedTileA (img :: CanvasImageSource)
 
 data TileMap = TileMap String (Array TileData)
 
@@ -208,13 +221,16 @@ type LoadedTileMap = {
   xMax :: Number,
   yMax :: Number,
   tiles :: Array LoadedTile,
-  walls :: Array LoadedTile}
+  walls :: Array Coords}
 
 dest :: Location Coords -> Coords
 dest (Location _ d) = d
 
 source :: Location Coords -> Coords
 source (Location s _) = s
+
+toCoords :: forall a. LoadedTileA a -> Coords
+toCoords tile = dest tile.location
 
 slot :: Cut Coords -> Maybe Direction -> Source
 slot (Cut l r u d) (Just dir) = case dir of

@@ -64,6 +64,17 @@ inputDrivenPosition dir src = case dir of
     DirectionTick Down f -> src { yoffset = src.yoffset + f }
     DirectionTick None _ -> src
 
+coordsToDirection :: Coords -> Coords -> Tuple DirectionTick Number
+coordsToDirection from to = let
+  yDist = to.ypos - from.ypos
+  xDist = to.xpos - from.xpos
+  dir = if yDist > 0.0 then Up
+        else if yDist < 0.0 then Down
+        else if xDist > 0.0 then Right
+        else if xDist < 0.0 then Left
+        else None in
+  Tuple (DirectionTick dir 1.0) (abs $ yDist + xDist)
+
 movement :: SpriteState -> Coords
 movement ss = position ss
 
@@ -85,13 +96,22 @@ isObstacle st loc = isObstacle' st loc { xpos = loc.xpos + loc.xoffset,
                                          ypos = loc.ypos + loc.yoffset }
 
 isObstacle' :: State -> Coords -> Boolean
-isObstacle' st loc = any (\x -> collision loc (dest x.location)) st.tileMap.walls
+isObstacle' st loc = any (collision loc) st.tileMap.walls
 
+-- | Each Coords defines a square. Checks if any of the vertices of loc1 fall in loc2
 collision' :: Coords -> Coords -> Boolean
 collision' loc1 loc2 = collision2 (toVertices (off loc1)) (off loc2)
   where
     off l  = l{xpos = l.xpos + l.xoffset + l.perimeter,
                ypos = l.ypos + l.yoffset + l.perimeter }
+
+-- | No offset applying to this collision function
+collision'' :: Coords -> Coords -> Boolean
+collision'' loc1 loc2 = collision2 (toVertices (off loc1)) (off loc2)
+  where
+    off l  = l{xpos = l.xpos + l.perimeter,
+               ypos = l.ypos + l.perimeter }
+
 
 -- Note that offset is applied to the first location passed
 collision :: Coords -> Coords -> Boolean
@@ -103,13 +123,13 @@ collision loc1 loc2  = xCollision && yCollision
                   (loc1.ypos < loc2.ypos + loc2.h)
 
 -- tests if any of the vertices supplied fall within the rectangle defined by
--- loc xoff yoff
+-- coordinates.
 collision2 :: Array Vertex -> Coords -> Boolean
 collision2 vertices loc = any (hasVertex loc) vertices
 
 hasVertex :: Coords -> Vertex -> Boolean
 hasVertex { perimeter, xpos, ypos, w, h} (Vertex x y) =
   x < xpos + w + perimeter &&
-  x > xpos - perimeter &&
+  x >= xpos - perimeter &&
   y < ypos + h + perimeter &&
-  y > ypos - perimeter
+  y >= ypos - perimeter

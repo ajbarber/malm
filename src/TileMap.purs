@@ -1,21 +1,26 @@
+
 module TileMap where
 
 import Prelude
 
 import Data.Argonaut.Core (Json)
 import Data.Argonaut.Decode (JsonDecodeError, decodeJson, parseJson)
-import Data.Array (filter, fold, last, range, sort, tail)
+import Data.Array (filter, find, fold, head, last, range, sort, sortBy, sortWith, tail)
 import Data.Either (Either(..))
-import Data.Int (toNumber)
-import Data.Maybe (fromMaybe)
+import Data.Int (floor, toNumber)
+import Data.Maybe (Maybe, fromMaybe)
 import Data.Number.Format (toString)
 import Data.Traversable (traverse)
+import Data.Tuple (Tuple(..))
+import Data.Tuple.Nested ((/\))
 import Effect.Aff (Aff)
 import ExampleMaps (dMap, lMap)
 import Hero as Hero
 import Image (loadImg)
+import Location (collision')
+import Math ((%))
 import Record as Record
-import Types (InputCoordMap, LoadedTile, Location(..), TileData, TileMap(..), LoadedTileMap, dest)
+import Types (Coords, InputCoordMap, LoadedTile, LoadedTileMap, Location(..), TileData, TileMap(..), dest, toCoords)
 
 baseOffset :: { xoffset :: Number, yoffset :: Number, perimeter :: Number }
 baseOffset = { xoffset: 0.0, yoffset: 0.0, perimeter: 0.0}
@@ -23,12 +28,14 @@ baseOffset = { xoffset: 0.0, yoffset: 0.0, perimeter: 0.0}
 loadedTileMap :: Aff LoadedTileMap
 loadedTileMap = do
   arr <- loadedTiles
+  let (xMin /\ xMax) = minMax (_.xpos) tileData
+      (yMin /\ yMax) = minMax (_.ypos) tileData
   pure { tiles: arr,
-         xMin: 0.0,
-         yMin: -Hero.defaultHeight/2.0,
-         xMax: xMax tileData + Hero.defaultWidth,
-         yMax: yMax tileData - Hero.defaultHeight/2.0,
-         walls: filter _.wall arr
+         xMin,
+         yMin,
+         xMax,
+         yMax,
+         walls: dest <$> (_.location) <$> (filter _.wall arr)
        }
 
 loadedTiles :: Aff (Array LoadedTile)
@@ -69,8 +76,13 @@ tileMap = TileMap "assets" tileData
 tileData :: Array TileData
 tileData = toTileData tileMapIn
 
-xMax :: Array TileData -> Number
-xMax arr = fromMaybe 0.0 $ last $ sort $ map (\e -> (dest e.loc).xpos) arr
+minMax :: (Coords -> Number) -> Array TileData -> Tuple Number Number
+minMax f arr = Tuple (fromMaybe 0.0 $ head sorted) (fromMaybe 0.0 $ last sorted)
+ where
+   sorted = sort $ map (\e -> f <<< dest $ e.loc) arr
 
-yMax :: Array TileData -> Number
-yMax arr = fromMaybe 0.0 $ last $ sort $ map (\e -> (dest e.loc).ypos) arr
+findTile :: Array TileData -> Coords -> Maybe TileData
+findTile tiles coords = find (\a -> flip collision' (dest a.loc) coords) tiles
+
+tileDistToGraph :: Number -> Number -> Int
+tileDistToGraph range pos = if pos == 0.0 then 0 else floor $ range/pos % 16.0

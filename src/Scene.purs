@@ -5,9 +5,11 @@ import Prelude
 import Data.DateTime.Instant (unInstant)
 import Data.Maybe (Maybe(..))
 import Dead as Dead
+import Debug (traceM)
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Now (now)
+import GraphRep (toGraph)
 import Graphics.Canvas (CanvasImageSource, Context2D)
 import Hero as Hero
 import Npc as Npc
@@ -53,7 +55,7 @@ init ctx hero npc tiles = do
       },
     npc: [{
       img: npc,
-      direction: PathMovement (Path (DirectionTick Left 1.0) 60.0 (Path (DirectionTick Up 1.0) 40.0 (Path (DirectionTick Left 1.0) 40.0 End))),
+      direction: PathMovement End,
       action: mempty,
       location: Npc.initLoc,
       animation: Nothing,
@@ -61,4 +63,5 @@ init ctx hero npc tiles = do
       width: 24.0,
       height: 28.0
       }],
-    tileMap: tiles }
+    tileMap: tiles,
+    graph: toGraph tiles.xMax tiles.tiles}

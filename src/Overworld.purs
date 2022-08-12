@@ -12,14 +12,14 @@ import Location (offset)
 import Types (State, dest, foldMovement, key)
 
 update :: State -> Effect State
-update gs = pure gs
+update = pure
 
 draw :: State -> Effect Unit
 draw state = do
   let heroPos = dest state.hero.location
   setFillStyle state.ctx "#43c443"
   fillRect state.ctx { width: 420.0, height: 280.0, x:0.0, y:0.0 }
-  for_ (visible heroPos state.tileMap.tiles) \n -> D.draw state n
+  for_ (visible heroPos state.tileMap.tiles) (D.draw state)
   text state
     where
     visible heroPos tileMap =

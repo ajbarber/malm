@@ -9,7 +9,7 @@ import Data.Maybe (Maybe(..))
 import Drawing as D
 import Effect (Effect)
 import Effect.Aff (Aff)
-import Graphics.Canvas (CanvasImageSource, strokeRect)
+import Graphics.Canvas (CanvasImageSource, fillText, strokeRect)
 import Image (loadImg)
 import Location (dampen, isObstacle, toCut)
 import Record as Record
@@ -84,6 +84,7 @@ drawChar :: State -> Effect Unit
 drawChar state = let
   Location srcPos newPos = state.hero.location
   in do
+  fillText state.ctx (show $ "(" <> show newPos.xpos <> "," <> show newPos.ypos <> ")") newPos.xpos (newPos.ypos - 5.0)
   strokeRect state.ctx $ {
     x: newPos.xpos, y: newPos.ypos,
     width: newPos.w + 2.0 * srcPos.perimeter, height: newPos.h }
