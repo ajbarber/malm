@@ -6,12 +6,14 @@ import Data.Argonaut.Core (Json)
 import Data.Argonaut.Decode (JsonDecodeError, decodeJson)
 import Data.Either (Either)
 import Data.Generic.Rep (class Generic)
+import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
 import Data.Show.Generic (genericShow)
 import Data.Time.Duration (Milliseconds)
 import Data.Tuple (Tuple)
 import Graph (class Graph)
 import Graphics.Canvas (CanvasImageSource, Context2D)
+import Math ((%))
 import Tree (Gr(..))
 
 attackFrames :: Number
@@ -104,20 +106,22 @@ data Movement a = InputMovement (InputEvent a) | PathMovement (Path a)
 
 data Path a = Path a Distance (Path a) | End
 
+data SpriteType = Hero | Npc
+
 derive instance eqMovement :: Eq a => Eq (Movement a)
 
 derive instance eqPath :: Eq a => Eq (Path a)
 
 instance pathShow :: (Show a) => Show (Path a)  where
-  show (Path a d p) = show p <> "[" <> show a <> ", Distance:" <> show d <> "]"
+  show (Path a d p) = "[" <> show a <> ", Distance:" <> show d <> "]" <> show p
   show End = "End"
 
 instance functorPath :: Functor Path where
   map f (Path a d p) = Path (f a) d (map f p)
   map _ End = End
 
-
 type SpriteState = {
+  typ :: SpriteType,
   img :: CanvasImageSource,
   location :: Location Coords,
   direction :: Movement DirectionTick,
@@ -158,6 +162,9 @@ data InputEvent e = InputEvent e
 instance inputEventShow :: (Show e) => Show (InputEvent e)  where
   show (InputEvent e) = "Input Event "<> show e
 
+-- instance coordsShow :: Show (ICoords a) where
+--   show { w, h, xpos, ypos } = "w: " <> w <> "," <> "h: " <> h <> "xpos: " <> xpos <> "," <> "ypos" <> ypos
+
 derive instance inputEvent :: (Eq e) => Eq (InputEvent e)
 
 instance inputEventMonoid :: (Eq e, Monoid e) => Monoid (InputEvent e) where
@@ -168,6 +175,22 @@ instance inputEventSemigroup :: (Eq e, Monoid e) => Semigroup (InputEvent e) whe
 
 instance functorInputEvent :: Functor (InputEvent) where
   map f (InputEvent e) = InputEvent (f e)
+
+instance pathMonoid :: (Eq e, Monoid e) => Monoid (Path e) where
+   mempty = End
+
+instance pathSemigroup :: (Eq e, Monoid e) => Semigroup (Path e) where
+  append (Path a1 d1 r1) _ = Path a1 d1 r1
+  append End _ = End
+
+instance movementMonoid :: (Eq e, Monoid e) => Monoid (Movement e) where
+   mempty = InputMovement (InputEvent mempty)
+
+instance movementSemigroup :: (Eq e, Monoid e) => Semigroup (Movement e) where
+  append (InputMovement e1) (InputMovement e2) = InputMovement (e1 <> e2)
+  append (InputMovement e1) (PathMovement End) = InputMovement e1
+  append (InputMovement _) (PathMovement e2) = PathMovement e2
+  append (PathMovement e1) _ = PathMovement e1
 
 key ::
   forall e.
@@ -241,12 +264,30 @@ slot (Cut l r u d) (Just dir) = case dir of
   None-> d
 slot (Cut l r u d) Nothing = d
 
+reverseTick :: DirectionTick -> DirectionTick
+reverseTick (DirectionTick dir r) = DirectionTick (reverse dir) r
+
 reverse :: Direction -> Direction
 reverse Up = Down
 reverse Down = Up
 reverse Left = Right
 reverse Right = Left
 reverse None = None
+
+clockwise :: Direction -> Direction
+clockwise Up = Right
+clockwise Down = Left
+clockwise Left = Up
+clockwise Right = Down
+clockwise None = None
+
+randomDir :: State -> Direction -> Direction
+randomDir state _ = let x = (toNumber state.frameCount) % 4.0 in case x of
+  1.0 -> Left
+  2.0 -> Right
+  3.0 -> Up
+  4.0 -> Down
+  _ -> None
 
 toVertices :: Coords -> Array Vertex
 toVertices { xpos, ypos, h, w } = [

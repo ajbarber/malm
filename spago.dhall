@@ -32,6 +32,7 @@ You can edit this file as you like.
   , "refs"
   , "transformers"
   , "tuples"
+  , "typelevel-prelude"
   , "web-events"
   , "web-html"
   , "web-uievents"

@@ -5,6 +5,7 @@ import Prelude
 import Data.List (List(..), singleton, (:))
 import Data.Maybe (Maybe(..))
 import Data.Tuple.Nested ((/\))
+import Debug (spy)
 import Graph (class Graph, Context, LPath(..), Node, emptyLP, isEmpty, match)
 import Heap as H
 

@@ -85,7 +85,7 @@ marshall :: AVar AsyncState -> State -> Effect State
 marshall aVar state = let h = state.hero in do
   e <- EVar.tryRead aVar
   pure $ state { hero {
-                    direction = map (append $ tick dirDecoder e) h.direction,
+                    direction = append (InputMovement (InputEvent $ tick dirDecoder e)) h.direction,
                     action = (tick (InputEvent <<< actionDecoder) e <> h.action) } }
 
 debounceInner ::

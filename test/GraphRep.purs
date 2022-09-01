@@ -6,7 +6,7 @@ import Data.Tuple.Nested ((/\))
 import Effect (Effect)
 import Effect.Class (class MonadEffect)
 import Effect.Class.Console (logShow)
-import GraphRep (fromNode, toGraph, toNode)
+import GraphRep (fromNode, tiles', toGraph', toNode)
 import SP (sp)
 import Types (Location(..))
 
@@ -60,7 +60,12 @@ testTiles ∷ Array { location ∷ Location { h :: Number , perimeter :: Number 
 testTiles = (\l -> { location: l, wall:false}) <$> map (\d -> Location d d) dests
 
 testToGraph :: Effect Unit
-testToGraph = logShow $ show $ toGraph 192.0 testTiles
+testToGraph = logShow $ show (toGraph' 192.0 16.0 [])
 
+testTilesGen :: Effect Unit
+testTilesGen = logShow $ "Generating simple tile xMax = 32.0, y= 32.0" <> show (tiles' 32.0 32.0 [])
+
+-- From 0, 0 to 24 * 16 = 384 =~ (0, 16). So SP should be just two moves upwards
+-- of length 16
 testSp :: Effect Unit
-testSp = logShow $ show $ sp 0 24 $ toGraph 192.0 testTiles
+testSp = logShow $ show $ sp 0 24 $ toGraph' 192.0 16.0 []

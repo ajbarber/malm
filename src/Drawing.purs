@@ -3,10 +3,9 @@ module Drawing where
 import Prelude
 
 import Effect (Effect)
-import Graphics.Canvas (CanvasImageSource, drawImageFull, strokeRect)
-import Location (offset)
+import Graphics.Canvas (CanvasImageSource, drawImageFull)
 import Location (translate)
-import Types (Location(..), State, Coords, dest)
+import Types (Coords, Location(..), State)
 
 -- Renders a sprite. Requires the state to perform a translation
 -- of coordinates based on where the hero is.
@@ -21,7 +20,7 @@ draw state { img, location: Location srcPos dstPos } = let
     srcPos.ypos
     (srcPos.w + fullPerimeter)
     (srcPos.h + fullPerimeter)
-    (dstPos'.xpos )
+    dstPos'.xpos
     dstPos'.ypos
     (dstPos'.w + fullPerimeter)
     (dstPos'.h + fullPerimeter)

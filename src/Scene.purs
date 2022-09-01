@@ -9,11 +9,11 @@ import Debug (traceM)
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Now (now)
-import GraphRep (toGraph)
+import GraphRep (toGraph')
 import Graphics.Canvas (CanvasImageSource, Context2D)
 import Hero as Hero
 import Npc as Npc
-import Types (Direction(..), DirectionTick(..), LoadedTileMap, Movement(..), Path(..), Scene(..), State)
+import Types (Direction(..), DirectionTick(..), LoadedTileMap, Movement(..), Path(..), Scene(..), SpriteType(..), State)
 import World as World
 
 scene :: State -> Scene
@@ -44,6 +44,7 @@ init ctx hero npc tiles = do
     frameCount: 0,
     ctx: ctx,
     hero: {
+      typ: Hero,
       img: hero,
       direction: InputMovement mempty,
       action: mempty,
@@ -54,6 +55,7 @@ init ctx hero npc tiles = do
       height: 20.0
       },
     npc: [{
+      typ: Npc,
       img: npc,
       direction: PathMovement End,
       action: mempty,
@@ -64,4 +66,4 @@ init ctx hero npc tiles = do
       height: 28.0
       }],
     tileMap: tiles,
-    graph: toGraph tiles.xMax tiles.tiles}
+    graph: toGraph' tiles.xMax tiles.yMax tiles.walls}
