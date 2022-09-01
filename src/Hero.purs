@@ -13,7 +13,7 @@ import Effect (Effect)
 import Effect.Aff (Aff)
 import Graphics.Canvas (CanvasImageSource, fillText, strokeRect)
 import Image (loadImg)
-import Location (coordsToDirection, dampen, isObstacle, toCut)
+import Location (coordsToDirection, dampen, isObstacle, side, toCut)
 import Record as Record
 import Sprite (action, animations, drawAnimation, health, isCollision, move, perimeter, static)
 import Types (Coords, Cut(..), Direction(..), DirectionTick(..), IsAttacking(..), Location(..), Movement(..), Path(..), Source, SpriteState, State, attackState, direction, foldMovement, key, reverse, reverseTick, dest)
@@ -76,10 +76,10 @@ damageShocks s ss = foldl damageShock ss s.npc
 
 damageShock :: SpriteState -> SpriteState -> SpriteState
 damageShock hero npc = case isCollision hero npc of
-  true -> hero { direction = PathMovement (Path (reverseTick curDir) 18.0 End) }
+  true -> hero { direction = PathMovement (Path (DirectionTick curDir 3.0) 18.0 End) }
   false -> hero
   where
-     curDir = fst $ coordsToDirection (dest hero.location) (dest npc.location)
+     curDir = side (dest hero.location) (dest npc.location)
 
 update' :: State -> SpriteState
 update' s = (animations s.frameCount <<< perimeter <<< damageShocks s <<< move' s <<< action) s.hero

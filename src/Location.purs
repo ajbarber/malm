@@ -64,12 +64,13 @@ walkPath typ p curCoords = case p of
   End -> curCoords
 
 -- direction first passed coords are approaching second passed coords from
--- side :: Coords -> Coords -> Direction
--- side coords1 coords2 = max
---   where
---     xdiff = coords1.xpos + coords1.xoffset - coords2.xpos - coords2.xoffset
---     ydiff = coords1.ypos + coords1.yoffset - coords2.ypos - coords2.yoffset
-
+side :: Coords -> Coords -> Direction
+side coords1 coords2 = case (abs xdiff > abs ydiff) of
+  true -> if xdiff < 0.0 then Left else Right
+  false -> if ydiff < 0.0 then Up else Down
+  where
+    xdiff = coords1.xpos + coords1.xoffset - coords2.xpos - coords2.xoffset
+    ydiff = coords1.ypos + coords1.yoffset - coords2.ypos - coords2.yoffset
 
 dist :: DirectionTick -> Number
 dist (DirectionTick _ f) = f
