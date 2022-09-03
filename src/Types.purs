@@ -98,7 +98,8 @@ instance functorMovement :: Functor Movement where
 foldMovement :: forall a b. (a -> b) -> Movement a -> Maybe b
 foldMovement f movement = case movement of
   InputMovement (InputEvent d) -> Just (f d)
-  PathMovement _ -> Nothing
+  PathMovement (Path d _ _) -> Just (f d)
+  PathMovement End -> Nothing
 
 -- Movement is either some input event describing some motion type a
 -- or a path we've calculated for the sprite

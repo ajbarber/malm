@@ -36,7 +36,7 @@ updatePath :: forall a. Coords -> Coords -> Movement DirectionTick -> Movement D
 updatePath old new pm | distance old new == 0.0 = popPathLeg pm
 updatePath old new (PathMovement (Path a d rest)) = newPath (Path a d rest) (d - (distance old new))
   where
-    newPath (Path p _ r) dst = if dst > 0.0 then PathMovement (Path p dst r) else spy "removing leg" PathMovement r
+    newPath (Path p _ r) dst = if dst > 0.0 then PathMovement (Path p dst r) else PathMovement r
     newPath End _ = PathMovement End
 updatePath _ _ i = i
 
