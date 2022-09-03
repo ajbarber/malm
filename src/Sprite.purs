@@ -26,14 +26,15 @@ move cut f sprite = let
   newPos = position sprite
   newPos' = if static sprite || f newPos then oldPos
             else newPos  in
-  spy ("blocked" <> show (static sprite)) sprite { location = Location cut newPos',
-                                                   direction = updatePath oldPos newPos' sprite.direction
+  spy ("blocked" <> show (f newPos)) sprite { location = Location cut newPos',
+                                              direction = updatePath oldPos newPos' sprite.direction
                                                  }
 
 -- Returns a new path subtracting the distance travelled on the current path leg
 -- If we have travelled all the distance on that leg, remove the node
 updatePath :: forall a. Coords -> Coords -> Movement DirectionTick -> Movement DirectionTick
-updatePath old new (PathMovement (Path a d rest)) = spy ("distance path" <> show (d - distance old new)) newPath (Path a d rest) (d - (distance old new))
+updatePath old new pm | distance old new == 0.0 = popPathLeg pm
+updatePath old new (PathMovement (Path a d rest)) = newPath (Path a d rest) (d - (distance old new))
   where
     newPath (Path p _ r) dst = if dst > 0.0 then PathMovement (Path p dst r) else spy "removing leg" PathMovement r
     newPath End _ = PathMovement End

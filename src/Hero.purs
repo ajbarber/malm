@@ -76,7 +76,7 @@ damageShocks s ss = foldl damageShock ss s.npc
 
 damageShock :: SpriteState -> SpriteState -> SpriteState
 damageShock hero npc = case isCollision hero npc of
-  true -> hero { direction = PathMovement (Path (DirectionTick curDir 3.0) 18.0 End) }
+  true -> hero { direction = PathMovement (Path (DirectionTick curDir 2.0) 28.0 End) }
   false -> hero
   where
      curDir = side (dest hero.location) (dest npc.location)
