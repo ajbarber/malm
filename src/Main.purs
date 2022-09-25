@@ -12,8 +12,8 @@ import Effect.Aff.AVar (new) as AVar
 import Effect.Class (liftEffect)
 import Event (hook, marshall) as Event
 import Graphics.Canvas (CanvasImageSource, getCanvasElementById, getContext2D)
-import Hero as Hero
-import Npc as Npc
+import HeroAnims as HeroAnims
+import NpcAnims as NpcAnims
 import Scene as Scene
 import TileMap (loadedTileMap)
 import Types (AsyncState, LoadedTileMap, State)
@@ -26,8 +26,8 @@ main = launchAff_ mainA
 mainA :: Aff Unit
 mainA = do
   aVar <- AVar.new []
-  heroImg <- Hero.load
-  npcImg <- Npc.load
+  heroImg <- HeroAnims.load
+  npcImg <- NpcAnims.load
   tileMap <- loadedTileMap
   liftEffect $ mainEffect aVar heroImg npcImg tileMap
 

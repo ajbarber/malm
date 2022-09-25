@@ -2,19 +2,18 @@ module World where
 
 import Prelude
 
-import Control.Applicative (($>))
-import Data.Array (head)
 import Data.DateTime.Instant (unInstant)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Foldable (for_, sequence_)
 import Data.Time.Duration (negateDuration)
+import Drawing as D
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Now (now)
-import Graphics.Canvas (fillText, setFont)
 import Hero as Hero
 import Npc as Npc
 import Overworld as Overworld
-import Types (State, AsyncState)
+import Sprite (drawAnimation)
+import Types (State)
 
 update :: State -> Effect State
 update state = do
@@ -28,4 +27,7 @@ update state = do
     }
 
 draw :: State -> Effect Unit
-draw state = Overworld.draw state *>  Npc.draw state *>  Hero.draw state
+draw state = Overworld.draw state *>
+             sequence_ (map (D.draw state) state.npc) *>
+             D.draw state state.hero *>
+             for_ state.hero.animation drawAnimation

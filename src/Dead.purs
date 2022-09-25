@@ -3,7 +3,7 @@ module Dead where
 import Prelude
 
 import Effect (Effect)
-import Hero as Hero
+import HeroAnims as HeroAnims
 import Types (Scene(..), State)
 import World as World
 
@@ -13,7 +13,7 @@ update state = case state.scene of
   Dead left -> case (left > 0) of
     true -> pure state { scene = Dead (left - 1) }
     false ->  pure state { scene = Main,
-                           hero = state.hero { location = Hero.initLoc,
+                           hero = state.hero { location = HeroAnims.initLoc,
                                                health = 100 }}
 
 draw :: State -> Effect Unit

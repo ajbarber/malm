@@ -11,6 +11,11 @@ import Record as Record
 import Type.Prelude (Proxy(..))
 import Types (Coords, Cut, Direction(..), DirectionTick(..), InputEvent(..), Location(..), Movement(..), Path(..), Source, SpriteState, SpriteType(..), State, Vertex(..), dest, key, slot, toVertices)
 
+translatedPos :: State -> SpriteState -> Coords
+translatedPos s ss = let
+  Location _ newPos = ss.location in
+  translate s newPos
+
 dampen ::
   Maybe Number ->
   Maybe Number ->

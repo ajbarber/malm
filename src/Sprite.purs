@@ -28,7 +28,7 @@ move cut f sprite = let
             else newPos  in
   spy ("blocked" <> show (f newPos)) sprite { location = Location cut newPos',
                                               direction = updatePath oldPos newPos' sprite.direction
-                                                 }
+                                            }
 
 -- Returns a new path subtracting the distance travelled on the current path leg
 -- If we have travelled all the distance on that leg, remove the node
